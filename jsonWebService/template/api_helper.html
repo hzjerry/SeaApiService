@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+  <meta name="copyright" content="xxx.com">
+  <meta name="description" content="html5,JsonWebService">
+  <title>api 接口使用帮助</title>
+  <link rel="stylesheet" type="text/css" href="{@web_root}css/web_v2.css" />
+  <link rel="stylesheet" type="text/css" href="{@web_root}css/bootstrap.min.css" />
+  <link rel="stylesheet" type="text/css" href="{@web_root}css/bootstrap-theme.min.css" />
+  <link rel="stylesheet" type="text/css" href="{@web_root}css/normalize.css" />
+  <script type="text/javascript" src="{@web_root}js/jquery-1.10.2.min.js"></script>
+
+<script>
+$(function(){
+	//初始化完成，启动title提示捕获
+	$("[data-toggle='tooltip']").tooltip();
+});
+</script>
+
+<style></style>
+
+</head>
+
+<body>
+    <header id="gc-bar"><!--头部Banner块-->
+        <div class="project_name">{@banner_head}API tester operation panel</div>
+        <div class="head_button">
+            <ul>
+                <li data-toggle="tooltip" data-placement="left" title="API document" onclick="javascript:window.location.href='?ctl=doc'"> <span class="glyphicon glyphicon-book"></span> </li>
+                <li data-toggle="tooltip" data-placement="left" title="Helper" onclick="javascript:window.location.href='?ctl=helper'"> <span class="glyphicon glyphicon-question-sign"></span> </li>
+            </ul>
+        </div>
+    </header>
+
+    <div id="gc-content"><!--内容块-->
+		<div class="subtitle" id="id_subtitle">
+			<span class="nav_menu" onclick="javascript:window.location.href='?ctl=doc'" data-toggle="tooltip" data-placement="left" title="">Back to document</span>
+		</div>
+        <div class="content-frame">
+
+            <div class="col-xs-3"><!--左侧目录标签区-->
+				<div class="list-group" style="margin-top:10px;">
+				  <a href="#" class="list-group-item">如何访问接口</a>
+				  <a href="#" class="list-group-item">接口的使用</a>
+				  <a href="#" class="list-group-item">安全层约定</a>
+				</div>
+            </div>
+
+            <div class="col-xs-9"><!--右侧内容区-->
+				<div class="page-header">
+				  <h1 id="forms">如何访问接口</h1>
+				</div>
+				<p>{@banner_head} 服务端使用http协议进行通信，接口的访问地址由开发者配置并发布，请向开发者索取访问地址</p>
+				<p>向服务端的接口提交数据的方式使用<strong>POST</strong>或者<strong>GET</strong>方法(当时使用GET时支持JsonP的回调方式)，数据结构采用json格式的字符串，数据的字符集格式必须为utf-8，否则服务器将无法解析您提交过来的数据，而拒绝访问。</p>
+				<p>接口返回的数据集同样采用json协议的的字符串，字符集编码使用utf-8（请注意不要用错字符集解码）。</p>
+				<p>如果使用<strong>POST</strong>方式，请将json数据体放到http数据包的body部分。</p>
+				<p>如果使用<strong>GET</strong>方式，请将json数据体跟在url地址的最后面/?b=....，请注意 b 的内容必须经过urlencode编码。且url建议总长度不要超过2048（非强制）。当使用GET方式提交数据同时，返回的数据需要用JsonP的形式，请在url地址中再带上jsonp=...参数；例如：/?b=...&jsonp=getjsonpxyz  其中jsonp是js端对应的jsonp函数名称，详情请参照<a href="http://baike.baidu.com/link?url=LXJblEX6_RQZlazeHA9db3pQ5hNming5-hj65qXHupqAOzkc8ObOQ29VcyJhdSevEsK3Od86iSs9wnMfZWJhT_" title="jsonp百度百科">jsonp</a>公开说明。</p>
+
+				<div class="page-header">
+				  <h1 id="forms">接口的使用</h1>
+				</div>
+				<p>你可以通过查询每个各自API定义的访问协议，按照请求协议的要求对其进行访问。 Web Server接收到访问请求后，会给返回对应API服务请求的结果集。</p>
+				<p class="lead">调用接口时必须提供的参数：</p>
+				<dl>
+				  <dt>http协议头必须包含：'Content-Type: application/json; charset=utf-8'</dt>
+				  <dd>约定传输的字符集必须使用 utf-8</dd>
+				</dl>
+				<dl>
+				  <dt>http协议头必须包含：'Signature: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'</dt>
+				  <dd>Signature为对post的body体的签名值，长度为40个字节，算法详见【安全层约定】</dd>
+				</dl>
+				<dl>
+				  <dt>http协议头必须包含：'UTC-Timestemp: xxxxxxxxxxxxx'</dt>
+				  <dd>UTC-Timestemp为Unix 纪元（格林威治时间 1970 年 1 月 1 日 00:00:00）到<strong>当前时间的秒数</strong>，算法详见【安全层约定】</dd>
+				</dl>
+				<dl>
+				  <dt>http协议头必须包含：'Random: xxxxxxxx'</dt>
+				  <dd>Random:为8位[a-zA-z0-9]随机字符，请保持每次调用接口时都是随机值，算法详见【安全层约定】</dd>
+				</dl>
+				<dl>
+				  <dt>输入协议必须包含：package 与 class 节点key</dt>
+				  <dd>这两个节点key，用于指定需要调用哪个包的指定接口</dd>
+				</dl>
+				<dl>
+				  <dt>需要package问授权时必须包含: checksum 节点key</dt>
+				  <dd>checksum并非必须，但是如果服务端接口配置的访问授权时，必须使用指定的package key与utc_timestemp计算签名（即:http协议头中的UTC-Timestemp值），算法详见【安全层约定】</dd>
+				</dl>
+				<dl>
+				  <dt>http协议头建议包含: 'User-Agent:'</dt>
+				  <dd>
+				    <p>加入User-Agent头可以更好的控制访问域，知道客户端的版本号，客户端使用系统环境，等信息。在开发后端的日志与接口维护能起到很大的帮助</p>
+					<p>User-Agent规范: [appname]/[ver] ([system info])；参数解释：[appname]:应用名称；[ver]:版本号，格式：x.x.x ；x为纯数字；[system info]：系统信息，如果是iphone或者android，必须带[iphone|android]字样（建议带上操作系统版本号，每项用';'分隔）</p>
+					<p>例如: advisor/11.10.0 (Android; MI 4LTE; 4.4.4)&nbsp;&nbsp;或 php_curl/1.10.0 (Apache/2.2.19 (Win64) PHP/5.4.9)&nbsp;&nbsp;或 advisor/1.10.2 (iPhone; iOS 8.4.1; Scale/2.00)</p>
+				  </dd>
+				</dl>
+
+				<div class="page-header">
+				  <h1 id="forms">安全层约定</h1>
+				</div>
+				<p>安全层处于接口的应用层之上，如被任何一个安全层拦截后，入口信息都不会进入到应用接口层，所有的访问日志都会被记录在日志中可进行追溯。</p>
+				<dl class="dl-horizontal">
+				  <dt>基本包签名验证</dt>
+				  <dd>
+					<p>此为基本安全验证机制，必须使用，否则服务端将拒绝请求访问。</p>
+					<p>签名算法为 sha1(body + utctimestemp + random + pubkey)；body为提交给服务端的入口数据包，pubkey为服务器的公钥（向系统管理员索取）</p>
+				  </dd>
+				</dl>
+				<dl class="dl-horizontal">
+				  <dt>Package访问密钥验证</dt>
+				  <dd>
+					<p>此为辅助安全验证，对于某些特殊要求的package包，进行时间戳校验，此时必须保持请求的客户端与服务端的时间同步，使用utc tmestemp(此处使用的UTC时间与前面header中使用的UTC-Timestemp是同一个值)精度到秒。每个package_key约定的允许时差基本为正负5分钟，当然管理员可以随时调整允许的误差值。</p>
+					<p>checksum 签名算法为 md5(utc_tmestemp + package + class + package_key)；package为接口的访问包路径，class是接口名称，package_key是包的访问密钥（向管理员索取）</p>
+				  </dd>
+				</dl>
+				<dl class="dl-horizontal">
+				  <dt>token访问授权验证</dt>
+				  <dd>
+				    <p>此为最高级别的安全验证，由接口应用层开启。启用后接口的请求入口协议中必须包含token节点，否则服务器将拒绝响应。一般需要用到用户身份验证与动态授权时才会使用到这个级别的安全验证。</p>
+					<p>token使用的流程为：<br/>1、通过相应的应用层接口对用户的身份进行验证，并授予token令牌；<br/>2、用户使用此token令牌访问授权区域内的接口；<br/>3、token有较复杂的验证规则，一般包含：授权时间，访问频度，访问范围</p>
+					<p>token格式：为&gt;0～9组成的且&gt;1的bigint数字字符串，由服务器提供</p>
+					<p></p>
+				  </dd>
+				</dl>
+
+            </div>
+        </div>
+    </div>
+
+    <div id="gc-footer" style="margin-top:5px;">
+        <div style="background:url({@web_root}/imgs/html5.png) no-repeat transparent;">
+            <span style="padding-left:40px;">&copy;{@copyright}</span>
+        </div>
+    </div>
+<script type="text/javascript"	src="{@web_root}js/bootstrap.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+  <meta name="copyright" content="xxx.com">
+  <meta name="description" content="html5,JsonWebService">
+  <title>api 接口在线调试</title>
+  <link rel="stylesheet" type="text/css" href="{@web_root}css/web_v2.css" />
+  <link rel="stylesheet" type="text/css" href="{@web_root}css/bootstrap.min.css" />
+  <link rel="stylesheet" type="text/css" href="{@web_root}css/bootstrap-theme.min.css" />
+  <link rel="stylesheet" type="text/css" href="{@web_root}css/normalize.css" />
+  <script type="text/javascript" src="{@web_root}js/jquery-1.10.2.min.js"></script>
+<script>
+var moRunType = {@run_type};
+var maClientCfgList = {@client_cfg_list};
+var msClientCfgKey = '{@client_cfg_key}';
+var moTransmissionByte = {@transmission_byte};
+</script>
+
+<style></style>
+
+</head>
+
+<body>
+    <header id="gc-bar"><!--头部Banner块-->
+        <div class="project_name">{@banner_head}API tester operation panel</div>
+        <div class="head_button">
+            <ul>
+                <li data-toggle="tooltip" data-placement="left" title="API document" onclick="javascript:window.location.href='?ctl=doc'"> <span class="glyphicon glyphicon-book"></span> </li>
+                <li data-toggle="tooltip" data-placement="left" title="Helper" onclick="javascript:window.location.href='?ctl=helper'"> <span class="glyphicon glyphicon-question-sign"></span> </li>
+            </ul>
+        </div>
+    </header>
+
+    <div id="gc-content"><!--内容块-->
+		<div class="subtitle" id="id_subtitle">
+			<span class="nav_menu" onclick="javascript:window.location.href='?ctl=doc&p={@package}&c={@class}'" data-toggle="tooltip" data-placement="left" title="">Back to document</span>
+		</div>
+        <div class="content-frame">
+
+            <div class="col-xs-4"><!--内容区-编辑发送内容-->
+
+				<div class="form-group">
+					<label>接口路由参数</label>
+					<div class="input-group">
+					  <div class="input-group-addon">Package</div>
+					  <div class="form-control">{@package}</div>
+					</div>
+				</div>
+
+				<div class="form-group">
+					<div class="input-group">
+					  <div class="input-group-addon">Class&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+					  <div class="form-control">{@class}</div>
+					</div>
+				</div>
+
+				<form method="post" action="?ctl=test">
+					<input type="hidden" name="p" value="{@package}">
+					<input type="hidden" name="c" value="{@class}">
+					<div class="form-group">
+						<label for="inport_json">数据发送区</label>
+						<textarea name="inport_json" class="form-control" rows="10">{@inport_post_json}</textarea>
+					</div>
+
+                    <div class="form-group">
+						<div class="input-group">
+						  <select class="form-control" id="id_client_cfg_list" name="f">
+                          </select>
+						  <span class="input-group-btn">
+							<button class="btn btn-default" type="submit" title="发送请求数据到服务端" data-toggle="tooltip" data-placement="left">
+								<span class="glyphicon glyphicon-send"></span>
+							</button>
+						  </span>
+						</div><!-- /input-group -->
+                    </div>
+				</form>
+
+				<div class="form-group">
+					<label for="inport_json">发送数据参考格式</label>
+					<textarea name="inport_json" class="form-control" rows="8" readonly>{@inport_template_json}</textarea>
+				</div>
+            </div>
+
+            <div class="col-xs-8"><!--内容区-显示接口运行数据-->
+				<div class="form-group">
+					<label>运行参数</label>
+					<div class="row">
+						<div class="form-group">
+							<div class="col-md-9">
+								<div class="input-group">
+								  <div class="input-group-addon">运行状态</div>
+								  <div class="form-control" id="id_run_type_info"></div>
+								</div>
+							</div>
+							<div class="col-md-3" data-toggle="tooltip" data-placement="top" title="客户端IP">
+								<div class="input-group">
+								  <div class="input-group-addon">IP</div>
+								  <div class="form-control">{@real_ip}</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="row form-group">
+					<div class="col-md-8">
+						<div class="input-group">
+						  <div class="input-group-addon">接口地址</div>
+						  <div class="form-control">{@remote_url}</div>
+						</div>
+					</div>
+					<div class="col-md-2">
+						<div class="input-group" data-toggle="tooltip" data-placement="top" title="发送的body字节数">
+						  <div class="input-group-addon">Txd</div>
+						  <div class="form-control" id="id_txd">0</div>
+						</div>
+					</div>
+					<div class="col-md-2">
+						<div class="input-group" data-toggle="tooltip" data-placement="top" title="收到的Json包字节数">
+						  <div class="input-group-addon">Rxd</div>
+						  <div class="form-control" id="id_rxd">0</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="row form-group">
+					<div class="col-md-4">
+						<div class="input-group">
+						  <div class="input-group-addon">本地时间</div>
+						  <div class="form-control">{@local_date}</div>
+						</div>
+					</div>
+					<div class="col-md-4">
+						<div class="input-group">
+						  <div class="input-group-addon">UTC时间</div>
+						  <div class="form-control">{@utc_date}</div>
+						</div>
+					</div>
+					<div class="col-md-4">
+						<div class="input-group">
+						  <div class="input-group-addon">UTC Timestemp</div>
+						  <div class="form-control">{@utc_timestemp}</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="row form-group">
+					<div class="col-md-4">
+						<div class="input-group" data-toggle="tooltip" data-placement="top" title="本地运行总耗时（单位: ms）">
+						  <div class="input-group-addon">总耗时</div>
+						  <div class="form-control">{@runtime}</div>
+						</div>
+					</div>
+					<div class="col-md-4">
+						<div class="input-group" data-toggle="tooltip" data-placement="top" title="请求直至获得回复的网络耗时（单位: ms）">
+						  <div class="input-group-addon">通信耗时</div>
+						  <div class="form-control">{@transmission_time}</div>
+						</div>
+					</div>
+					<div class="col-md-4">
+						<div class="input-group" data-toggle="tooltip" data-placement="top" title="服务端接口工作耗时（单位: ms）">
+						  <div class="input-group-addon">API耗时</div>
+						  <div class="form-control">{@api_runtime}</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="form-group">
+					<label for="inport_json">返回结果集</label>
+					<pre>{@remort_date}</pre>
+				</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="gc-footer" style="margin-top:5px;">
+        <div style="background:url({@web_root}/imgs/html5.png) no-repeat transparent;">
+            <span style="padding-left:40px;">&copy;{@copyright}</span>
+        </div>
+    </div>
+
+</body>
+<script type="text/javascript"	src="{@web_root}js/bootstrap.min.js"></script>
+<script type="text/javascript"	src="{@web_root}js/template_api_test_main.js"></script>
+</html>

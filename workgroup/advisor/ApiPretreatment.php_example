@@ -1,0 +1,21 @@
+<?php
+/**
+ * 预处理模板
+ * <li>在此处 处理的逻辑为进入应用层前的最后一个系统逻辑</li>
+ * @author JerryLi
+ *
+ */
+final class ApiPretreatment implements IJsonWebServiceVisitPretreatment{
+    /**
+     * (non-PHPdoc)
+     * @see IJsonWebServiceVisitPretreatment::IJsonWebServiceVisitPretreatment()
+     */
+    public function toDo(& $aInJson){
+        $aUA = JsonWebService::resloveUserAgentInfo();
+        if (0 === JsonWebService::compareVerCode(array(1,10,0), $aUA['ver'])){ //当版本号=1.10.0时进行的处理
+            return true; //阻断后续的执行
+        }else{
+            return false; //继续后面应用层的执行
+        }
+    }
+}
