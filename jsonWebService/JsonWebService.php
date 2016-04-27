@@ -75,7 +75,7 @@ final class JsonWebService{
     /**
      * 系统日志
      * @var array
-     * <li>array('in'=>'入口内容', 'out'=>'出口内容', 'pkg'=>'包路径信息', 'cls'=>'接口名信息', 'status_code'=>'状态码', 'step'=>'阶段', 
+     * <li>array('in'=>'入口内容', 'out'=>'出口内容', 'pkg'=>'包路径信息', 'cls'=>'接口名信息', 'status_code'=>'状态码', 'step'=>'阶段',
      * 'runtime'=>'运行时间ms', 'sign'=>'body签名')</li>
      * <li>step: [receive:接收到数据 | resolve:Json解析成功数据 | reply:接口正常回复 | app_err:应用错误]</li>
      */
@@ -101,7 +101,7 @@ final class JsonWebService{
      * @var IJsonWebServiceCloseReplay
      */
     private $_ifCloseReplay = null;
-    
+
     /**
      * 接口的输入输出流过滤器
      * @var IJsonWebServiceIoPretreatment
@@ -288,7 +288,7 @@ final class JsonWebService{
                 return false;
             }
         }
-        
+
         //检查body签名有效性
         $bSignFail = true;
         $iTime = time(); //当前时间
@@ -370,7 +370,7 @@ final class JsonWebService{
                 unset($oap);$oap=null; //回收资源
             }
         }
-        
+
         $sFile = rtrim($this->_sRootPath, '/') .'/'. str_replace('.', '/', rtrim($this->_sWorkspace, '.')) .
                  str_replace('.', '/', rtrim($this->_aInJson['package'], '.')) .
                  '/'. $this->_aInJson['class'] .'.class.php';
@@ -460,7 +460,7 @@ final class JsonWebService{
             foreach ($aPubKey as $aNode){
                 if ($aNode['deadline'] > 0 && $aNode['deadline'] < $iTime){
                     continue; //公钥已过期，跳过此公钥
-                } 
+                }
                 if (md5($this->_iClientUtcTimestemp . $sPackage . $sClass . $aNode['key']) !== $sCheckSum){
                     $this->_throwState('917'); //校验失败
                     return false;
@@ -499,7 +499,7 @@ final class JsonWebService{
 		    $this->_aResultData['status']['runtime'] = sprintf('%.4f', (microtime(true) - $this->_iStartTime) * 1000);
 		}
 		$sOutData = self::json_encode($this->_aResultData, empty($this->_aResultData['result'])); //存储需要发送的数据包
-		
+
 		ob_start();
 		if (!is_null($this->_sJsonP_Func)){ //输出数据需要封装成jsonp方式
 		    header('Content-Type: text/javascript; charset=UTF-8'); //默认字符集
@@ -520,13 +520,20 @@ final class JsonWebService{
 		        echo $sOutData;
 		    }
 		}
-		ob_end_flush(); 
-		
+		ob_end_flush();
+
 		if(!is_null($this->_ifLog)){ //记录日志
 		    $this->_aLog['out'] = $sOutData;
 		    $this->_aLog['status_code'] = (isset($this->_aResultData['status']['code']) ? $this->_aResultData['status']['code'] : '');
 		    $this->_aLog['step'] = 'reply';
 		}
+    }
+    /**
+     * 获取当前workspace工作目录
+     * @return string
+     */
+    public function getWorkspace(){
+        return rtrim($this->_sRootPath, '/') .'/'. str_replace('.', '/', rtrim($this->_sWorkspace, '.'));
     }
     /**
      *
@@ -713,7 +720,7 @@ final class JsonWebService{
                 break;
             }
         }
-    
+
         $aVerCode = explode('.', $sVer); //版本号数组化
         if (count($aVerCode) === 3){
             foreach ($aVerCode as & $sNode)
