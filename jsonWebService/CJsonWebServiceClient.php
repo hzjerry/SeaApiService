@@ -216,7 +216,6 @@ class CJsonWebServiceClient{
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5 ); //php版本5.2.3及以上，连接超时时间(秒)
         curl_setopt($ch, CURLOPT_TIMEOUT, 60 ); //运行超时(秒)
         curl_setopt($ch, CURLOPT_POSTFIELDS, $sData); //送出post数据
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); //打开获取错误信息
         curl_setopt($ch, CURLOPT_HEADER, true); //获取头信息
         $iStart = microtime(true); //记录通信开始时间
         $sResponse = curl_exec($ch);//运行curl
