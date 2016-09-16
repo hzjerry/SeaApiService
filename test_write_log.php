@@ -13,9 +13,14 @@ final class TestWirteLog implements IJsonWebServiceLog{
      * @see IJsonWebServiceLog::createLog()
      */
     public function createLog($aParam){
-        $aParam['ip'] = implode('.', JsonWebService::real_ip()); //访问者IP
+        if (class_exists(JsonWebService)){ //正常web请求服务
+            $aParam['ip'] = implode('.', JsonWebService::real_ip()); //访问者IP
+            $aParam['user_agent'] = $_SERVER['HTTP_USER_AGENT'];
+        }else{ //cli外壳的请求服务
+            $aParam['ip'] = '127.0.0.1';
+            $aParam['user_agent'] = '';
+        }
         $aParam['memory'] = ceil(memory_get_peak_usage()/1000); //kb
-        $aParam['user_agent'] = $_SERVER['HTTP_USER_AGENT'];
         $aParam['date'] = date('Y-m-d H:i:s'); //kb
         if (($hf = fopen(ROOT_PATH . '/SeaApiService/JsonWebServiceLog.log', 'ab')) !== false){
             if (!fwrite($hf, print_r($aParam, true) ."\n")){	//日志写入失败

@@ -147,28 +147,42 @@ abstract class CJsonWebServiceLogicBase{
      * @return array('ver'=>array(x,x,x)版本号数组, 'appname'=>'应用名称', 'client'=>'客户端类型[iphone|android|webserver|other]')
      */
     private function _resloveUserAgentInfo(){
-        $this->_aUserAgentInfo = JsonWebService::resloveUserAgentInfo();
+        if (class_exists('JsonWebService')){ //cli时不会加载JsonWebService类
+            $this->_aUserAgentInfo = JsonWebService::resloveUserAgentInfo();
+        }
     }
     /**
      * 客户端版本号
      * @return array(x,x,x)
      */
     protected function getClientVer(){
-        return $this->_aUserAgentInfo['ver'];
+        if (isset($this->_aUserAgentInfo['ver'])){
+            return $this->_aUserAgentInfo['ver'];
+        }else{
+            return array();
+        }
     }
     /**
      * 客户端名称
      * @return string:
      */
     protected function getClientAppname(){
-        return $this->_aUserAgentInfo['appname'];
+        if (isset($this->_aUserAgentInfo['appname'])){
+            return $this->_aUserAgentInfo['appname'];
+        }else{
+            return '';
+        }
     }
     /**
      * 获取客户端类型
      * @return string [iphone | android | webserver | other]
      */
     protected function getClientType(){
-        return $this->_aUserAgentInfo['client'];
+        if (isset($this->_aUserAgentInfo['client'])){
+            return $this->_aUserAgentInfo['client'];
+        }else{
+            return '';
+        }
     }
     /**
      * 返回输出结构化数组

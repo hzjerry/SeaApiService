@@ -42,15 +42,16 @@ $(function(){
 
             <div class="col-xs-3"><!--左侧目录标签区-->
 				<div class="list-group" style="margin-top:10px;">
-				  <a href="#" class="list-group-item">如何访问接口</a>
-				  <a href="#" class="list-group-item">接口的使用</a>
-				  <a href="#" class="list-group-item">安全层约定</a>
+				  <a href="#bm_how_to_visit" class="list-group-item">如何访问接口</a>
+				  <a href="#bm_how_to_use" class="list-group-item">接口的使用</a>
+				  <a href="#bm_security_Layer" class="list-group-item">安全层约定</a>
+				  <a href="#bm_cli_shell" class="list-group-item">CLI命令行请求方式</a>
 				</div>
             </div>
 
             <div class="col-xs-9"><!--右侧内容区-->
 				<div class="page-header">
-				  <h1 id="forms">如何访问接口</h1>
+				  <h1 id="forms"><a name="bm_visit">如何访问接口</a></h1>
 				</div>
 				<p>{@banner_head} 服务端使用http协议进行通信，接口的访问地址由开发者配置并发布，请向开发者索取访问地址</p>
 				<p>向服务端的接口提交数据的方式使用<strong>POST</strong>或者<strong>GET</strong>方法(当时使用GET时支持JsonP的回调方式)，数据结构采用json格式的字符串，数据的字符集格式必须为utf-8，否则服务器将无法解析您提交过来的数据，而拒绝访问。</p>
@@ -59,7 +60,7 @@ $(function(){
 				<p>如果使用<strong>GET</strong>方式，请将json数据体跟在url地址的最后面/?b=....，请注意 b 的内容必须经过urlencode编码。且url建议总长度不要超过2048（非强制）。当使用GET方式提交数据同时，返回的数据需要用JsonP的形式，请在url地址中再带上jsonp=...参数；例如：/?b=...&jsonp=getjsonpxyz  其中jsonp是js端对应的jsonp函数名称，详情请参照<a href="http://baike.baidu.com/link?url=LXJblEX6_RQZlazeHA9db3pQ5hNming5-hj65qXHupqAOzkc8ObOQ29VcyJhdSevEsK3Od86iSs9wnMfZWJhT_" title="jsonp百度百科">jsonp</a>公开说明。</p>
 
 				<div class="page-header">
-				  <h1 id="forms">接口的使用</h1>
+				  <h1 id="forms"><a name="bm_how_to_use">接口的使用</a></h1>
 				</div>
 				<p>你可以通过查询每个各自API定义的访问协议，按照请求协议的要求对其进行访问。 Web Server接收到访问请求后，会给返回对应API服务请求的结果集。</p>
 				<p class="lead">调用接口时必须提供的参数：</p>
@@ -97,7 +98,7 @@ $(function(){
 				</dl>
 
 				<div class="page-header">
-				  <h1 id="forms">安全层约定</h1>
+				  <h1 id="forms"><a name="bm_security_Layer">安全层约定</a></h1>
 				</div>
 				<p>安全层处于接口的应用层之上，如被任何一个安全层拦截后，入口信息都不会进入到应用接口层，所有的访问日志都会被记录在日志中可进行追溯。</p>
 				<dl class="dl-horizontal">
@@ -123,6 +124,14 @@ $(function(){
 					<p></p>
 				  </dd>
 				</dl>
+
+				<div class="page-header">
+				  <h1 id="forms"><a name="bm_cli_shell">CLI命令行请求方式</a></h1>
+				</div>
+				<p>{@banner_head} 服务端还可以通过CLI的命令行方式调用接口；其目的是有满足后台定时任务或者异步任务的调用方式，此时运行接口不会占用http的资源。</p>
+				<p>CLI外壳模式运行接口时，不会对请求做任何安全验证，应此执行效率会很高，token访问授权还是支持的。</p>
+				<p>使用方式：<span style="color:red;">[php所在目录]php.exe</span> + 空格 + <span style="color:blue;">[cli的外壳入口程序路径]</span> + 空格 + [入口参数(注意需要对json字符串做base64编码)]</p>
+				<p>例如：<span style="color:red;">"C:/Program Files (x86)/php/5_4_45/php.exe"</span> <span style="color:blue;">E:/PHPRoot/git/fapis/fapis_cli_shell.php</span> eyJwYWNrYWdlIjoiYWR2aXNvci50ZXN0IiwiY2xhc3MiOiJHRVRfVVNFUl9JTkZPIiwibmFtZSI6IjExIiwiYWdlIjoiMTEifQ</p>
 
             </div>
         </div>

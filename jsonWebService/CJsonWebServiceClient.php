@@ -205,6 +205,10 @@ class CJsonWebServiceClient{
         $aHeader[] = 'UTC-Timestemp: '. $this->_iUtcTimestemp;  //HTTP_UTC_TIMESTEMP
         $aHeader[] = 'Random: '. $iRandom; //HTTP_RANDOM
         $aHeader[] = 'Expect:';
+        if (false !== strpos($this->_sJWS_URL, 'https:')){ //加入https专用请求头
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // 跳过证书检查
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2); // 从证书中检查SSL加密算法是否存在
+        }
         curl_setopt($ch,CURLOPT_URL, $this->_sJWS_URL); //接口地址
         curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0); //强制协议为1.0
         curl_setopt($ch, CURLOPT_HTTPHEADER, $aHeader);//设置header
