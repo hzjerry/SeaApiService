@@ -114,8 +114,9 @@ final class JsonCliService{
      * 构造函数
      * @param string $sRootPath 网站绝对根目录
      * @param string $sFramePath 框架文件的相对根路径
+     * @param string $sConfigPath 配置文件的路径
      */
-    public function __construct($sRootPath, $sFramePath){
+    public function __construct($sRootPath, $sFramePath, $sConfigPath){
         ob_end_flush(); //刷出缓冲区并关闭输出缓存
         $this->_iStartTime = microtime(true); //记录起始时间
         $this->_sRootPath = $sRootPath;
@@ -128,7 +129,7 @@ final class JsonCliService{
             self::$aResultStateList[strval($sKey)] = $sVal;
         }
         //载入配置文件信息
-        if (!$this->_read_config(rtrim($sRootPath, '/') .'/'. rtrim($sFramePath, '/') .'/config/'. self::CONFIG_FILE_NAME)){
+        if (!$this->_read_config($sConfigPath . '/'. self::CONFIG_FILE_NAME)){
             //配置文件加载失败
             $this->_output(); //输出返回值
         }
@@ -436,7 +437,7 @@ final class JsonCliService{
      */
     static function json_encode(& $aData, $bObjectType=false){
         list($a, $b, $c) = explode('.', PHP_VERSION); //取出版本号
-        if (intval($a) >= 5 && intval($b) >= 4){
+        if (intval($a) >=6 || (intval($a) >= 5 && intval($b) >= 4)){
             if ($bObjectType){ //加入空数组转换为对象处理
                 return json_encode($aData, JSON_UNESCAPED_UNICODE | JSON_FORCE_OBJECT); //不编码全角字符集
             }else{

@@ -190,7 +190,7 @@ class CJsonWebServiceClient{
         if ('UTF-8' !== self::LOCAL_CHARSET) //识别如果源字符集非UTF-8则强制转换为UTF-8
             $aData = self::convert_encoding(self::LOCAL_CHARSET, 'UTF-8', $aData);
 
-        $sData = self::json_encode($aData, JSON_UNESCAPED_UNICODE); //数组转换成json对象
+        $sData = self::json_encode($aData); //数组转换成json对象
         $this->_aHistory['sent'] = $sData; //保存最后一次发送的数据
         $iRandom = rand(10000000, 99999999); //随机数
         $this->_aHistory['sign'] = sha1($sData . $this->_iUtcTimestemp . $iRandom . $sKey); //数据包签名值
@@ -221,6 +221,7 @@ class CJsonWebServiceClient{
         curl_setopt($ch, CURLOPT_TIMEOUT, 60 ); //运行超时(秒)
         curl_setopt($ch, CURLOPT_POSTFIELDS, $sData); //送出post数据
         curl_setopt($ch, CURLOPT_HEADER, true); //获取头信息
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1); //自动重定向1次
         $iStart = microtime(true); //记录通信开始时间
         $sResponse = curl_exec($ch);//运行curl
         $aCurlInfo = curl_getinfo($ch);//获取状态信息
@@ -284,7 +285,7 @@ class CJsonWebServiceClient{
      */
     static function json_encode(& $aData){
         list($a, $b, $c) = explode('.', PHP_VERSION); //取出版本号
-        if (intval($a) >= 5 && intval($b) >= 4){
+        if (intval($a) >=6 || (intval($a) >= 5 && intval($b) >= 4)){
             return json_encode($aData, JSON_UNESCAPED_UNICODE); //不编码全角字符集
         }else{
             return json_encode($aData);
