@@ -16,6 +16,12 @@ final class JsonWebService{
      */
     const LOCAL_CHARSET = 'GBK';
     /**
+     * 关闭安全层
+     * <li>关闭所有安全处理</li>
+     * @var boolean
+     */
+    private $_bCloseSecurityLayer = false;
+    /**
      * 公钥（用于签名）
      * <li>array(array('key'=>'', 'deadline'=>0),...)</li>
      * @var array
@@ -138,8 +144,9 @@ final class JsonWebService{
      * 构造函数
      * @param string $sRootPath 网站绝对根目录
      * @param string $sFramePath 框架文件的相对根路径
+     * @param string $sConfigPath 配置文件的路径
      */
-    public function __construct($sRootPath, $sFramePath){
+    public function __construct($sRootPath, $sFramePath, $sConfigPath){
         $this->_iStartTime = microtime(true); //记录起始时间
         $this->_sRootPath = $sRootPath;
         $this->_sFramePath = $sFramePath;
@@ -151,7 +158,7 @@ final class JsonWebService{
             self::$aResultStateList[strval($sKey)] = $sVal;
         }
         //载入配置文件信息
-        if (!$this->_read_config(rtrim($sRootPath, '/') .'/'. rtrim($sFramePath, '/') .'/config/'. self::CONFIG_FILE_NAME)){
+        if (!$this->_read_config($sConfigPath . '/'. self::CONFIG_FILE_NAME)){
             //配置文件加载失败
             $this->_output(); //输出返回值
         }
@@ -229,6 +236,7 @@ final class JsonWebService{
     protected function _read_config($sFilePath){
         if (file_exists($sFilePath)){ //检查配置文件是否存在
             $aCfg = require $sFilePath; //载入配置文件
+            $this->_bCloseSecurityLayer = $aCfg['close_security_layer'];
             $this->_aPubKey = $aCfg['sign_pub_key'];
             $this->_sWorkspace = $aCfg['workgroup'];
             $this->_iReplayTime=$aCfg['replay_time'];
@@ -261,58 +269,60 @@ final class JsonWebService{
             $this->_throwState('999'); //数据签名不正确
             return false;
         }
-        //数据签名参数获取
-        if (isset($_SERVER['HTTP_SIGNATURE'])){ //获取HTTP头中的签名参数
-            $sSign = $_SERVER['HTTP_SIGNATURE'];
-        }else{ //从GET中获取签名参数
-            $sSign = isset($_GET['sign']) ? strtolower(trim($_GET['sign'])) : null;
-        }
-        if (!isset($_SERVER['HTTP_SIGNATURE']) || !isset($_SERVER['HTTP_UTC_TIMESTEMP']) || !isset($_SERVER['HTTP_RANDOM'])){
-            $this->_throwState('901'); //缺少必要的HEAD参数
-            return false;
-        }
-        //取出http头部的必要参数
-        $sSign = trim($_SERVER['HTTP_SIGNATURE']);
-        $this->_aLog['sign'] = $sSign; //保存客户端送来的body签名
-        $this->_iClientUtcTimestemp = doubleval($_SERVER['HTTP_UTC_TIMESTEMP']);
-        $sRandom = $_SERVER['HTTP_RANDOM'];
-        if (strlen($sRandom) !== 8){
-            $this->_throwState('902'); //HTTP HEAD RANDOM参数无效
-            return false;
-        }elseif(!empty($sSign) && strlen($sSign) !== 40){
-            $this->_throwState('911'); //签名信息无效
-            return false;
-        }elseif (is_null($this->_ifCloseReplay)){ //未开启重放截止逻辑
-            if ($this->_iReplayTime > 0 && abs(time() - $this->_iClientUtcTimestemp) > $this->_iReplayTime){ //计算时间戳是否过期
-                $this->_throwState('903'); //时间戳过期
+        if (!$this->_bCloseSecurityLayer){ //数据包
+            //数据签名参数获取
+            if (isset($_SERVER['HTTP_SIGNATURE'])){ //获取HTTP头中的签名参数
+                $sSign = $_SERVER['HTTP_SIGNATURE'];
+            }else{ //从GET中获取签名参数
+                $sSign = isset($_GET['sign']) ? strtolower(trim($_GET['sign'])) : null;
+            }
+            if (!isset($_SERVER['HTTP_SIGNATURE']) || !isset($_SERVER['HTTP_UTC_TIMESTEMP']) || !isset($_SERVER['HTTP_RANDOM'])){
+                $this->_throwState('901'); //缺少必要的HEAD参数
                 return false;
             }
-        }
-
-        //检查body签名有效性
-        $bSignFail = true;
-        $iTime = time(); //当前时间
-        foreach ($this->_aPubKey as $aNode){
-            if ($aNode['deadline'] > 0 && $aNode['deadline'] < $iTime){
-                continue; //公钥已过期，跳过此公钥
-            }
-            if (sha1($this->_sInData . $this->_iClientUtcTimestemp . $sRandom . $aNode['key']) === $sSign){
-                $bSignFail = false; //通过签名验证
-                break;
-            }
-        }
-        if ($bSignFail){ //签名验证失败
-            $this->_throwState('911'); //数据签名验证失败
-            return false;
-        }elseif (!is_null($this->_ifCloseReplay)){ //判断是否开启重放截止逻辑
-            if ($this->_iReplayTime > 0){ //定义了重允许重放粒度，使用$this->_iReplayTime作为失效时间
-                $bRet = $this->_ifCloseReplay->checkReplay($sSign, $this->_iReplayTime);
-            }else{//未定义允许重放粒度，默认sign过期时间为1小时
-                $bRet = $this->_ifCloseReplay->checkReplay($sSign, 3600);
-            }
-            if ($bRet){ //发现存在重放请求
-                $this->_throwState('904');
+            //取出http头部的必要参数
+            $sSign = trim($_SERVER['HTTP_SIGNATURE']);
+            $this->_aLog['sign'] = $sSign; //保存客户端送来的body签名
+            $this->_iClientUtcTimestemp = doubleval($_SERVER['HTTP_UTC_TIMESTEMP']);
+            $sRandom = $_SERVER['HTTP_RANDOM'];
+            if (strlen($sRandom) !== 8){
+                $this->_throwState('902'); //HTTP HEAD RANDOM参数无效
                 return false;
+            }elseif(!empty($sSign) && strlen($sSign) !== 40){
+                $this->_throwState('911'); //签名信息无效
+                return false;
+            }elseif (is_null($this->_ifCloseReplay)){ //未开启重放截止逻辑
+                if ($this->_iReplayTime > 0 && abs(time() - $this->_iClientUtcTimestemp) > $this->_iReplayTime){ //计算时间戳是否过期
+                    $this->_throwState('903'); //时间戳过期
+                    return false;
+                }
+            }
+    
+            //检查body签名有效性
+            $bSignFail = true;
+            $iTime = time(); //当前时间
+            foreach ($this->_aPubKey as $aNode){
+                if ($aNode['deadline'] > 0 && $aNode['deadline'] < $iTime){
+                    continue; //公钥已过期，跳过此公钥
+                }
+                if (sha1($this->_sInData . $this->_iClientUtcTimestemp . $sRandom . $aNode['key']) === $sSign){
+                    $bSignFail = false; //通过签名验证
+                    break;
+                }
+            }
+            if ($bSignFail){ //签名验证失败
+                $this->_throwState('911'); //数据签名验证失败
+                return false;
+            }elseif (!is_null($this->_ifCloseReplay)){ //判断是否开启重放截止逻辑
+                if ($this->_iReplayTime > 0){ //定义了重允许重放粒度，使用$this->_iReplayTime作为失效时间
+                    $bRet = $this->_ifCloseReplay->checkReplay($sSign, $this->_iReplayTime);
+                }else{//未定义允许重放粒度，默认sign过期时间为1小时
+                    $bRet = $this->_ifCloseReplay->checkReplay($sSign, 3600);
+                }
+                if ($bRet){ //发现存在重放请求
+                    $this->_throwState('904');
+                    return false;
+                }
             }
         }
         //将收到的数据包转换为数组
@@ -349,7 +359,7 @@ final class JsonWebService{
             return false;
         }
         //package接口访问安全验证
-        if (!$this->checkPackageSecurity()){
+        if ($this->_bCloseSecurityLayer || !$this->checkPackageSecurity()){
             return false;
         }
         //接口访问预处理类
@@ -529,7 +539,7 @@ final class JsonWebService{
 		}
     }
     /**
-     * 获取当前workspace工作目录
+     * 获取workspace的工作目录
      * @return string
      */
     public function getWorkspace(){
@@ -594,7 +604,7 @@ final class JsonWebService{
      */
     static function json_encode(& $aData, $bObjectType=false){
         list($a, $b, $c) = explode('.', PHP_VERSION); //取出版本号
-        if (intval($a) >= 5 && intval($b) >= 4){
+        if (intval($a) >=6 || (intval($a) >= 5 && intval($b) >= 4)){
             if ($bObjectType){ //加入空数组转换为对象处理
                 return json_encode($aData, JSON_UNESCAPED_UNICODE | JSON_FORCE_OBJECT); //不编码全角字符集
             }else{

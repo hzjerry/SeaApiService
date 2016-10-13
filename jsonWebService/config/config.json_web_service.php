@@ -7,6 +7,11 @@ return array(
     //业务逻辑类文件目录区
     'workgroup'     =>  'SeaApiService/workgroup/',
     /*
+     * 安全层开关（当true时，全框架的所有安全防御都将关闭）
+     * 【注意】：fapis接口如果直接暴露在外网，绝对不能关闭安全层
+     */
+    'close_security_layer'  => false,
+    /*
      * 入口校验用的重放时间粒度(0表示无约束, >0表示允许与服务器之间的误差秒数)
      * 即:允许客户端与服务器之间差的误差范围，防止包被截获后重复提交
      * 如果开启了截止回放逻辑bindCloseReplayObject()，此参数为sign的过期时间（建议此时设为3600）

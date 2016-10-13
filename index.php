@@ -3,7 +3,7 @@ define('ROOT_PATH', dirname(dirname(__FILE__)));
 define('FRAME_PATH', '/SeaApiService/jsonWebService/');
 include(ROOT_PATH . FRAME_PATH . 'JsonWebService.php');
 
-$oJ = new JsonWebService(ROOT_PATH, FRAME_PATH);
+$oJ = new JsonWebService(ROOT_PATH, FRAME_PATH, ROOT_PATH . FRAME_PATH. 'config/');
 /**
  * 绑定辅助功能区
  */

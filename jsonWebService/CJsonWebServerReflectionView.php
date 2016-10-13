@@ -73,9 +73,9 @@ class CJsonWebServerReflectionView{
      * 构造函数
      * @param string $sRootPath 网站绝对根目录
      * @param string $sFramePath 框架文件的相对根路径
-     * @param string $sCfgFile 配置文件名称
+     * @param string $sConfigPath JsonWebService的配置文件路径
      */
-    public function __construct($sRootPath, $sFramePath){
+    public function __construct($sRootPath, $sFramePath, $sConfigPath){
         $this->_iStartTime = microtime(true); //记录起始时间
         $this->_sRootPath = $sRootPath;
         $this->_sFramePath = $sFramePath;
@@ -86,19 +86,20 @@ class CJsonWebServerReflectionView{
         require_once rtrim($sRootPath, '/') .'/'. rtrim($sFramePath, '/') .'/JsonWebService.php'; //取返回状态值用
         require_once rtrim($sRootPath, '/') .'/'. rtrim($sFramePath, '/') .'/CJsonWebServiceClient.php'; //取返回状态值用
         $this->_sLocalCharset = JsonWebService::LOCAL_CHARSET; //获取本地字符集
-        $this->_read_config();
+        $this->_read_config($sConfigPath);
         //进入页面的路由逻辑
         $this->_routePage();
     }
     /**
      * 读取配置信息
+     * @param string $sConfigPath JsonWebService的配置文件路径
      * @return void
      */
-    protected function _read_config(){
+    protected function _read_config($sConfigPath){
         $aCtgRoot = rtrim($this->_sRootPath, '/') .'/'. rtrim($this->_sFramePath, '/') .'/config/';
         //读取JsonWebService系统的服务端配置信息
-        if (file_exists($aCtgRoot . JsonWebService::CONFIG_FILE_NAME)){ //检查配置文件是否存在
-            $aCfg = require $aCtgRoot . JsonWebService::CONFIG_FILE_NAME; //载入配置文件
+        if (file_exists($sConfigPath .'/' . JsonWebService::CONFIG_FILE_NAME)){ //检查配置文件是否存在
+            $aCfg = require $sConfigPath .'/' . JsonWebService::CONFIG_FILE_NAME; //载入配置文件
             $this->_sWorkspace = rtrim($this->_sRootPath, '/') .'/'. $aCfg['workgroup'];
             foreach ($aCfg['sign_pub_key'] as $aNode){
                 if ($aNode['deadline'] === 0){
@@ -474,7 +475,7 @@ class CJsonWebServerReflectionView{
                     }
                 }
                 unset($iCode); $iCode = null;
-                
+
                 if ($o->getTokenCheckStatus()){ //加入Token安全验证接口的返回参数
                     foreach (CJsonWebServiceTokenSecurity::$aResultStateList as $sKey => $sVal){
                         $aData['sys_status_code'][strval($sKey)] = $sVal;
