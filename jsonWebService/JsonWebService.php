@@ -372,8 +372,10 @@ final class JsonWebService{
             if (class_exists($aRunClass, false)){ //找到访问预处理类
                 $oap = new $aRunClass();
                 if (is_a($oap, 'IJsonWebServiceVisitPretreatment')){
-                    if ($oap->toDo($this->_aInJson)){
-                        $this->_throwState('905'); //包访问被预处理程序阻断
+                    $aRet = $oap->toDo($this->_aInJson);
+                    if (false !== $aRet){ //阻断执行并返回状态
+                        self::$aResultStateList[$aRet['code']] = $aRet['msg'];
+                        $this->_throwState($aRet['code']); //包访问被预处理程序阻断
                         return false; //token校验未通过
                     }
                 }

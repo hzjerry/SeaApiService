@@ -13,7 +13,7 @@ final class ApiPretreatment implements IJsonWebServiceVisitPretreatment{
     public function toDo(& $aInJson){
         $aUA = JsonWebService::resloveUserAgentInfo();
         if (0 === JsonWebService::compareVerCode(array(1,10,0), $aUA['ver'])){ //当版本号=1.10.0时进行的处理
-            return true; //阻断后续的执行
+            return array('code'=>'950', 'msg'=>'请求被预处理阻断'); //阻断后续的执行
         }else{
             return false; //继续后面应用层的执行
         }
