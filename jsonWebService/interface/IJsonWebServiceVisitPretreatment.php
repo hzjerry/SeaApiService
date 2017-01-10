@@ -13,7 +13,7 @@ interface IJsonWebServiceVisitPretreatment{
      * 访问预处理
      * @param array $aInJson json解析成数组后的对象
      * <li>此为引用访问，如果要传递值给应用层可以直接修改$aInJson的值</li>
-     * @return false:可继续执行（进入应用层） | 阻断执行：array('code'=>'xxxxx', 'msg'=>'请求被预处理阻断')
+     * @return false:可继续执行（进入应用层） | 阻断执行返回状态：array('code'=>'905', 'msg'=>'.....')
      */
     public function toDo(& $aInJson);
 }

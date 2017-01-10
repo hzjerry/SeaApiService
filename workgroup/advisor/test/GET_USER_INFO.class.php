@@ -58,7 +58,7 @@ final class GET_USER_INFO extends CJsonWebServiceLogicBase implements IJsonWebSe
      * @see CJsonWebServiceLogicBase::setDeadline()
      */
     protected function setDeadline(){
-        return strtotime('2016-12-30 00:00:00'); //永不过期;
+        return strtotime('2020-12-30 00:00:00'); //永不过期;
     }
     /**
      * (non-PHPdoc)

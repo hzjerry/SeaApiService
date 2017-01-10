@@ -19,7 +19,7 @@ abstract class CJsonWebServiceTokenSecurity{
      */
     static public $aResultStateList = array(
         '950'=>'Missing token token parameter.(缺少token令牌参数)',
-        '951'=>'Token not registered or expired.(token不存在或已过期)',
+        '951'=>'登录失效，请重新登录',
     );
     /**
      * 校验Token令牌的有效性

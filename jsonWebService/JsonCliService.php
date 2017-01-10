@@ -19,16 +19,6 @@ final class JsonCliService{
      */
     const LOCAL_CHARSET = 'GBK';
     /**
-     * 客户端的时间戳
-     * @var double
-     */
-    private $_iClientUtcTimestemp = 0;
-    /**
-     * 网站的物理根目录
-     * @var string
-     */
-    private $_sRootPath = '';
-    /**
      * 框架的相对根路径
      * @var string
      */
@@ -91,46 +81,39 @@ final class JsonCliService{
      */
     static public $aResultStateList = array(
         '999'=>'There is no post and get data.(不存在post或get数据)',
+        '998'=>'Invalid Workspace directory.(接口的workspace实例工作目录不存在)',
         '901'=>'Received protocol packets can not be resolved.(收到的协议包无法解析)',
-        '901'=>'Lack of necessary HEAD parameters.(缺少必要的HTTP HEAD参数)',
-        '902'=>'Invalid parameter HTTP HEAD RANDOM.(HTTP HEAD RANDOM参数无效)',
-        '903'=>'UTC Time stamp expired.(时间戳过期)',
-        '904'=>'Refused to replay the request.(拒绝重放请求)',
-        '905'=>'Request be Pretreatment to blocked.(请求被预处理阻断)',
-        '910'=>'Configuration file read failed.(配置文件读取失败)',
-        '911'=>'Data signature is incorrect.(数据签名不正确)',
-        '912'=>'package and class node values do not exist.(package或class节点值不存在)',
-        '913'=>'checksum value attribute node does not exist.(checksum节点的value属性不存在)',
-        '914'=>'The checksum validation did not pass.(checksum校验未通过)',
-        '915'=>'API interface class not found.(api接口服务类未找到)',
-        //916 被 CJsonWebServiceLogicBase 类占用 //'API interface services no output result set.(api接口服务无输出结果集)'
-        '917'=>'checksum check failure.(checksum校验失败)',
-        //920 被 CJsonWebServiceLogicBase 类占用 //'The returned value of the unregistered state.(未注册的返回状态值)'
+//         '901'=>'Lack of necessary HEAD parameters.(缺少必要的HTTP HEAD参数)',
+        '917'=>'package and class node values do not exist.(package或class节点值不存在)',
+        '918'=>'API interface class not found.(api接口服务类未找到)',
+        '919'=>'API interface file not found.(api接口文件未找到)',
+        //920 ~ 929 被 CJsonWebServiceLogicBase 类占用
         '930'=>'Invalid characters in package.(package中存在无效字符)',
         '940'=>'Interface has invalid.(此接口已经废除，停止服务)',
         //950～959 Token占用的状态码
     );
     /**
      * 构造函数
-     * @param string $sRootPath 网站绝对根目录
      * @param string $sFramePath 框架文件的相对根路径
-     * @param string $sConfigPath 配置文件的路径
+     * <li>请使用本框架所在目录的绝对根路径,如：d:/website/jsonWebService/</li>
+     * @param string $sWorkspacePath 接口的工作逻辑根目录位置
+     * <li>请使用绝对路径,如： d:/website/api/worgroup/</li>
      */
-    public function __construct($sRootPath, $sFramePath, $sConfigPath){
+    public function __construct($sFramePath, $sWorkspacePath){
         ob_end_flush(); //刷出缓冲区并关闭输出缓存
         $this->_iStartTime = microtime(true); //记录起始时间
-        $this->_sRootPath = $sRootPath;
         $this->_sFramePath = $sFramePath;
         //加载必须的基础类
-        require_once rtrim($sRootPath, '/') .'/'. rtrim($sFramePath, '/') .'/base/CJsonWebServiceLogicBase.php';
-        require_once rtrim($sRootPath, '/') .'/'. rtrim($sFramePath, '/') .'/interface/IJsonWebServiceProtocol.php';
+        require_once rtrim($sFramePath, '/') .'/base/CJsonWebServiceLogicBase.php';
+        require_once rtrim($sFramePath, '/') .'/interface/IJsonWebServiceProtocol.php';
         //注入CJsonWebServiceLogicBase类中的状态码
         foreach (CJsonWebServiceLogicBase::$aResultStateList as $sKey => $sVal){
             self::$aResultStateList[strval($sKey)] = $sVal;
         }
-        //载入配置文件信息
-        if (!$this->_read_config($sConfigPath . '/'. self::CONFIG_FILE_NAME)){
-            //配置文件加载失败
+        if (file_exists($sWorkspacePath)){ //检查工作目录是否有效
+            $this->_sWorkspace = rtrim($sWorkspacePath, '/\\') .'/';
+        }else{ //接口实例文件目录不存在
+            $this->_throwState('998'); //接口的workspace实例工作目录不存在
             $this->_output(); //输出返回值
         }
     }
@@ -192,21 +175,6 @@ final class JsonCliService{
         }
     }
     /**
-     * 读取配置信息
-     * @return void
-     */
-    protected function _read_config($sFilePath){
-        if (file_exists($sFilePath)){ //检查配置文件是否存在
-            $aCfg = require $sFilePath; //载入配置文件
-            $this->_sWorkspace = $aCfg['workgroup'];
-            unset($aCfg);
-            return true;
-        }else{
-            $this->_throwState('910'); //配置文件读取失败
-            return false;
-        }
-    }
-    /**
      * 读取输入的数据
      * @return boolean
      */
@@ -243,7 +211,7 @@ final class JsonCliService{
     protected function _route(){
         if (!isset($this->_aInJson['package']) || empty($this->_aInJson['package']) ||
             !isset($this->_aInJson['class']) || empty($this->_aInJson['class'])){
-            $this->_throwState('912'); //缺少package与class数据项
+            $this->_throwState('917'); //缺少package与class数据项
             return false;
         }
         if(!is_null($this->_ifLog)){ //记录日志
@@ -257,26 +225,27 @@ final class JsonCliService{
             return false;
         }
         //接口访问预处理类
-        $sFile = rtrim($this->_sRootPath, '/') .'/'. str_replace('.', '/', rtrim($this->_sWorkspace, '.')) .
+        $sFile = $this->_sWorkspace .
                  substr($this->_aInJson['package'], 0, strpos($this->_aInJson['package'], '.')) . '/ApiPretreatment.php';
         if (file_exists($sFile)){ //预处理文件存在
-            require_once rtrim($this->_sRootPath, '/') .'/'. rtrim($this->_sFramePath, '/') .'/interface/IJsonWebServiceVisitPretreatment.php';//注入接口申明
+            require_once trim($this->_sFramePath, '/') .'/interface/IJsonWebServiceVisitPretreatment.php';//注入接口申明
             require_once $sFile; //加载包的访问预处理类
             $aRunClass = 'ApiPretreatment'; //访问预处理类名称
             if (class_exists($aRunClass, false)){ //找到访问预处理类
                 $oap = new $aRunClass();
                 if (is_a($oap, 'IJsonWebServiceVisitPretreatment')){
-                    if ($oap->toDo($this->_aInJson)){
-                        $this->_throwState('905'); //包访问被预处理程序阻断
+                    $aRet = $oap->toDo($this->_aInJson);
+                    if (false !== $aRet){ //阻断执行并返回状态
+                        self::$aResultStateList[$aRet['code']] = $aRet['msg'];
+                        $this->_throwState($aRet['code']); //包访问被预处理程序阻断
                         return false; //token校验未通过
                     }
                 }
                 unset($oap);$oap=null; //回收资源
             }
         }
-        $sFile = rtrim($this->_sRootPath, '/') .'/'. str_replace('.', '/', rtrim($this->_sWorkspace, '.')) .
-                 str_replace('.', '/', rtrim($this->_aInJson['package'], '.')) .
-                 '/'. $this->_aInJson['class'] .'.class.php';
+        $sFile = $this->_sWorkspace .
+                 str_replace('.', '/', rtrim($this->_aInJson['package'], '.')) .'/'. $this->_aInJson['class'] .'.class.php';
         if (file_exists($sFile)){ //类文件存在
             require_once $sFile; //加载类
             $sRunClass = strtoupper($this->_aInJson['class']); //类名
@@ -305,10 +274,10 @@ final class JsonCliService{
                     return true;
                 }
             }else{ //未找到类（类文件命名不正确）
-                $this->_throwState('915'); //未找到执行类
+                $this->_throwState('918'); //未找到执行类
             }
         }else{
-            $this->_throwState('915'); //未找到执行文件
+            $this->_throwState('919'); //未找到执行文件
         }
         return false;
     }
@@ -376,7 +345,7 @@ final class JsonCliService{
      * @return string
      */
     public function getWorkspace(){
-        return rtrim($this->_sRootPath, '/') .'/'. str_replace('.', '/', rtrim($this->_sWorkspace, '.'));
+        return $this->_sWorkspace;
     }
     /**
      *

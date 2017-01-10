@@ -1,7 +1,7 @@
 <?php
 define('ROOT_PATH', dirname(dirname(__FILE__)));
 define('FRAME_PATH', '/SeaApiService/jsonWebService/');
-include(ROOT_PATH . FRAME_PATH . 'CJsonWebServiceClient.php');
+require_once(ROOT_PATH . FRAME_PATH . 'CJsonWebServiceClient.php');
 
 header('Content-Type:text/html; charset=gbk');
 

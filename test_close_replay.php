@@ -1,5 +1,5 @@
 <?php
-include(ROOT_PATH . FRAME_PATH . 'interface/IJsonWebServiceCloseReplay.php');
+require_once(ROOT_PATH . FRAME_PATH . 'interface/IJsonWebServiceCloseReplay.php');
 /**
  * 模拟的截止回放
  * <li>数据存储在memcached中</li>
@@ -12,6 +12,11 @@ final class TestCloseReplay implements IJsonWebServiceCloseReplay{
      * @var string
      */
     const KEY_HEAD = 'JWS_CR_';
+    /**
+     * 截止重放的保持时间（秒）
+     * @var int
+     */
+    const REPLAY_INTERCEPTION = 900;
     /**
      * Memcache缓存对象
      * @var Memcache
@@ -42,14 +47,21 @@ final class TestCloseReplay implements IJsonWebServiceCloseReplay{
     }
     /**
      * (non-PHPdoc)
+     * @see IJsonWebServiceCloseReplay::getReplayInterceptionSecond()
+     */
+    public function getReplayInterceptionSecond(){
+        return self::REPLAY_INTERCEPTION;
+    }
+    /**
+     * (non-PHPdoc)
      * @see IJsonWebServiceCloseReplay::checkReplay()
      */
-    public function checkReplay($sSignKey, $iReplayTime){
+    public function checkReplay($sSignKey){
         if (is_null(self::$moMC)){
             return false; //mmemcached缓存服务不存在
         }else{
             if (is_null($this->_get(self::KEY_HEAD . $sSignKey))){ //签名不存在，建立缓存
-                $this->_set(self::KEY_HEAD . $sSignKey, 1, $iReplayTime);
+                $this->_set(self::KEY_HEAD . $sSignKey, 1, self::REPLAY_INTERCEPTION);
                 return false; //mmemcached注册签名
             }else{ //发现签名存在（判为重放）
                 return true; //识别到一次重放

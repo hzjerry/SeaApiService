@@ -33,7 +33,7 @@ abstract class CJsonWebServiceLogicBase{
      * @var boolean
      */
     private $_bDontWriteLog = false;
-    
+
     /**
      * 保存从JsonWebService中Token解析后得到的Token的内容
      * @var array
@@ -50,8 +50,8 @@ abstract class CJsonWebServiceLogicBase{
      * @var array
      */
     static public $aResultStateList = array(
-        '916'=>'API interface services no output result set.(api接口服务无输出结果集)',
         '920'=>'The returned value of the unregistered state.(未注册的返回状态值)',
+        '921'=>'API interface services no output result set.(api接口服务无输出结果集)',
     );
     /**
      * 返回结果集的数组
@@ -190,7 +190,7 @@ abstract class CJsonWebServiceLogicBase{
      */
     public function getResult(){
         if (empty($this->_sResultCode)){
-            $this->_sResultCode = '916'; //无输出结果集
+            $this->_sResultCode = '921'; //无输出结果集
         }elseif (!isset(self::$aResultStateList[$this->_sResultCode])){
             $this->_sResultCode = '920'; //未注册的状态码
         }

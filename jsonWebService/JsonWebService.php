@@ -16,24 +16,6 @@ final class JsonWebService{
      */
     const LOCAL_CHARSET = 'GBK';
     /**
-     * 关闭安全层
-     * <li>关闭所有安全处理</li>
-     * @var boolean
-     */
-    private $_bCloseSecurityLayer = false;
-    /**
-     * 公钥（用于签名）
-     * <li>array(array('key'=>'', 'deadline'=>0),...)</li>
-     * @var array
-     */
-    private $_aPubKey = '';
-    /**
-     * 重放时间粒度（单位秒）
-     * <li>从配置文件读取的数据</li>
-     * @var int
-     */
-    private $_iReplayTime = 0;
-    /**
      * 客户端的时间戳
      * @var double
      */
@@ -44,7 +26,7 @@ final class JsonWebService{
      */
     private $_sRootPath = '';
     /**
-     * 框架的相对根路劲
+     * 框架的绝对根路径
      * @var string
      */
     private $_sFramePath = '';
@@ -53,11 +35,6 @@ final class JsonWebService{
      * @var string
      */
     private $_sWorkspace = '';
-    /**
-     * 包接口访问安全密钥
-     * @var array
-     */
-    private $_aPackageSecurityPubKey = null;
     /**
      * 保存输入的post数据
      * @var string
@@ -98,6 +75,11 @@ final class JsonWebService{
      */
     private $_ifLog = null;
     /**
+     * JsonWebService接口的入口请求安全层
+     * @var CJsonWebServiceImportSecurity
+     */
+    private $_oImportSecurity = null;
+    /**
      * Token安全校验对象
      * @var CJsonWebServiceTokenSecurity
      */
@@ -121,45 +103,40 @@ final class JsonWebService{
      */
     static public $aResultStateList = array(
         '999'=>'There is no post and get data.(不存在post或get数据)',
+        '998'=>'Invalid Workspace directory.(接口的workspace实例工作目录不存在)',
         '901'=>'Received protocol packets can not be resolved.(收到的协议包无法解析)',
-        '901'=>'Lack of necessary HEAD parameters.(缺少必要的HTTP HEAD参数)',
-        '902'=>'Invalid parameter HTTP HEAD RANDOM.(HTTP HEAD RANDOM参数无效)',
-        '903'=>'UTC Time stamp expired.(时间戳过期)',
-        '904'=>'Refused to replay the request.(拒绝重放请求)',
-        '905'=>'Request be Pretreatment to blocked.(请求被预处理阻断)',
-        '910'=>'Configuration file read failed.(配置文件读取失败)',
-        '911'=>'Data signature is incorrect.(数据签名不正确)',
-        '912'=>'package and class node values do not exist.(package或class节点值不存在)',
-        '913'=>'checksum value attribute node does not exist.(checksum节点的value属性不存在)',
-        '914'=>'The checksum validation did not pass.(checksum校验未通过)',
-        '915'=>'API interface class not found.(api接口服务类未找到)',
-        //916 被 CJsonWebServiceLogicBase 类占用 //'API interface services no output result set.(api接口服务无输出结果集)'
-        '917'=>'checksum check failure.(checksum校验失败)',
-        //920 被 CJsonWebServiceLogicBase 类占用 //'The returned value of the unregistered state.(未注册的返回状态值)'
+        //902~914 输入安全验证类占用 CJsonWebServiceImportSecurity 
+        '915'=>'Refused to replay the request.(拒绝重放请求)',
+        '917'=>'package and class node values do not exist.(package或class节点值不存在)',
+        '918'=>'API interface class not found.(api接口服务类未找到)',
+        '919'=>'API interface file not found.(api接口文件未找到)',
+        //920 ~ 929 被 CJsonWebServiceLogicBase 类占用
         '930'=>'Invalid characters in package.(package中存在无效字符)',
         '940'=>'Interface has invalid.(此接口已经废除，停止服务)',
         //950～959 Token占用的状态码
     );
     /**
      * 构造函数
-     * @param string $sRootPath 网站绝对根目录
      * @param string $sFramePath 框架文件的相对根路径
-     * @param string $sConfigPath 配置文件的路径
+     * <li>请使用本框架所在目录的绝对根路径,如：d:/website/jsonWebService/</li>
+     * @param string $sWorkspacePath 接口的工作逻辑根目录位置
+     * <li>请使用绝对路径,如： d:/website/api/worgroup/</li>
      */
-    public function __construct($sRootPath, $sFramePath, $sConfigPath){
+    public function __construct($sFramePath, $sWorkspacePath){
         $this->_iStartTime = microtime(true); //记录起始时间
-        $this->_sRootPath = $sRootPath;
         $this->_sFramePath = $sFramePath;
         //加载必须的基础类
-        require_once rtrim($sRootPath, '/') .'/'. rtrim($sFramePath, '/') .'/base/CJsonWebServiceLogicBase.php';
-        require_once rtrim($sRootPath, '/') .'/'. rtrim($sFramePath, '/') .'/interface/IJsonWebServiceProtocol.php';
+        require_once rtrim($sFramePath, '/') .'/base/CJsonWebServiceLogicBase.php';
+        require_once rtrim($sFramePath, '/') .'/base/CJsonWebServiceImportSecurity.php';
+        require_once rtrim($sFramePath, '/') .'/interface/IJsonWebServiceProtocol.php';
         //注入CJsonWebServiceLogicBase类中的状态码
         foreach (CJsonWebServiceLogicBase::$aResultStateList as $sKey => $sVal){
             self::$aResultStateList[strval($sKey)] = $sVal;
         }
-        //载入配置文件信息
-        if (!$this->_read_config($sConfigPath . '/'. self::CONFIG_FILE_NAME)){
-            //配置文件加载失败
+        if (file_exists($sWorkspacePath)){ //检查工作目录是否有效
+            $this->_sWorkspace = rtrim($sWorkspacePath, '/\\') .'/';
+        }else{ //接口实例文件目录不存在
+            $this->_throwState('998'); //接口的workspace实例工作目录不存在
             $this->_output(); //输出返回值
         }
     }
@@ -180,6 +157,24 @@ final class JsonWebService{
      */
     public function bindLogObject(IJsonWebServiceLog $iflog){
         $this->_ifLog = $iflog;
+    }
+    /**
+     * 绑定JsonWebService接口的入口请求安全层
+     * @param CJsonWebServiceImportSecurity $oIS
+     */
+    public function bindImportSecurityObject(CJsonWebServiceImportSecurity $oIS){
+        if (is_null($this->_oImportSecurity)){//注入CJsonWebServiceImportSecurity类中的状态码
+            $sErrCode = $oIS->loadCfg(); //载入配置文件
+            if (!is_null($sErrCode)){
+                $this->_throwState($sErrCode); //配置文件读取失败
+                return false;
+            }
+            
+            foreach (CJsonWebServiceImportSecurity::$aResultStateList as $sKey => $sVal){
+                self::$aResultStateList[strval($sKey)] = $sVal;
+            }
+        }
+        $this->_oImportSecurity = $oIS;
     }
     /**
      * 绑定Token安全验证检查对象
@@ -230,25 +225,6 @@ final class JsonWebService{
         }
     }
     /**
-     * 读取配置信息
-     * @return void
-     */
-    protected function _read_config($sFilePath){
-        if (file_exists($sFilePath)){ //检查配置文件是否存在
-            $aCfg = require $sFilePath; //载入配置文件
-            $this->_bCloseSecurityLayer = $aCfg['close_security_layer'];
-            $this->_aPubKey = $aCfg['sign_pub_key'];
-            $this->_sWorkspace = $aCfg['workgroup'];
-            $this->_iReplayTime=$aCfg['replay_time'];
-            $this->_aPackageSecurityPubKey = $aCfg['package_security_pub_key'];
-            unset($aCfg);
-            return true;
-        }else{
-            $this->_throwState('910'); //配置文件读取失败
-            return false;
-        }
-    }
-    /**
      * 读取输入的数据
      * @return boolean
      */
@@ -266,69 +242,32 @@ final class JsonWebService{
             $this->_aLog['step'] = 'receive';
         }
         if (empty($this->_sInData)){
-            $this->_throwState('999'); //数据签名不正确
+            $this->_throwState('999'); //缺少入口数据包
             return false;
         }
-        if (!$this->_bCloseSecurityLayer){ //数据包
-            //数据签名参数获取
-            if (isset($_SERVER['HTTP_SIGNATURE'])){ //获取HTTP头中的签名参数
-                $sSign = $_SERVER['HTTP_SIGNATURE'];
-            }else{ //从GET中获取签名参数
-                $sSign = isset($_GET['sign']) ? strtolower(trim($_GET['sign'])) : null;
-            }
-            if (!isset($_SERVER['HTTP_SIGNATURE']) || !isset($_SERVER['HTTP_UTC_TIMESTEMP']) || !isset($_SERVER['HTTP_RANDOM'])){
-                $this->_throwState('901'); //缺少必要的HEAD参数
+        /* 安全验证之 - 入口签名验证*/
+        if (!is_null($this->_oImportSecurity)){ //需要进行入口安全验证
+            $sErrorCode = $this->_oImportSecurity->checkSignSecurity($this->_sInData); //检查入口签名有效性
+            if (!is_null($sErrorCode)){ //入口检查未通过
+                $this->_throwState($sErrorCode);
                 return false;
             }
             //取出http头部的必要参数
             $sSign = trim($_SERVER['HTTP_SIGNATURE']);
             $this->_aLog['sign'] = $sSign; //保存客户端送来的body签名
-            $this->_iClientUtcTimestemp = doubleval($_SERVER['HTTP_UTC_TIMESTEMP']);
-            $sRandom = $_SERVER['HTTP_RANDOM'];
-            if (strlen($sRandom) !== 8){
-                $this->_throwState('902'); //HTTP HEAD RANDOM参数无效
+        }
+        /* 安全验证之 - 截至重放*/
+        if (!is_null($this->_ifCloseReplay)){ //判断是否开启重放截止逻辑
+            if ($this->_ifCloseReplay->checkReplay($sSign)){ //检查是否存在重放请求
+                $this->_throwState('915'); //拒绝重放请求
                 return false;
-            }elseif(!empty($sSign) && strlen($sSign) !== 40){
-                $this->_throwState('911'); //签名信息无效
-                return false;
-            }elseif (is_null($this->_ifCloseReplay)){ //未开启重放截止逻辑
-                if ($this->_iReplayTime > 0 && abs(time() - $this->_iClientUtcTimestemp) > $this->_iReplayTime){ //计算时间戳是否过期
-                    $this->_throwState('903'); //时间戳过期
-                    return false;
-                }
-            }
-    
-            //检查body签名有效性
-            $bSignFail = true;
-            $iTime = time(); //当前时间
-            foreach ($this->_aPubKey as $aNode){
-                if ($aNode['deadline'] > 0 && $aNode['deadline'] < $iTime){
-                    continue; //公钥已过期，跳过此公钥
-                }
-                if (sha1($this->_sInData . $this->_iClientUtcTimestemp . $sRandom . $aNode['key']) === $sSign){
-                    $bSignFail = false; //通过签名验证
-                    break;
-                }
-            }
-            if ($bSignFail){ //签名验证失败
-                $this->_throwState('911'); //数据签名验证失败
-                return false;
-            }elseif (!is_null($this->_ifCloseReplay)){ //判断是否开启重放截止逻辑
-                if ($this->_iReplayTime > 0){ //定义了重允许重放粒度，使用$this->_iReplayTime作为失效时间
-                    $bRet = $this->_ifCloseReplay->checkReplay($sSign, $this->_iReplayTime);
-                }else{//未定义允许重放粒度，默认sign过期时间为1小时
-                    $bRet = $this->_ifCloseReplay->checkReplay($sSign, 3600);
-                }
-                if ($bRet){ //发现存在重放请求
-                    $this->_throwState('904');
-                    return false;
-                }
             }
         }
+        
         //将收到的数据包转换为数组
         $this->_aInJson = json_decode($this->_sInData, true);
         if (is_null($this->_aInJson)){ //解析json失败
-            $this->_throwState('901');
+            $this->_throwState('901'); //收到的协议包无法解析
             return false;
         }else{ //json解析成功
             if (!is_null($this->_ifIoPretreatment)){ //输入包解析成数组后的字符串预处理
@@ -345,7 +284,7 @@ final class JsonWebService{
     protected function _route(){
         if (!isset($this->_aInJson['package']) || empty($this->_aInJson['package']) ||
             !isset($this->_aInJson['class']) || empty($this->_aInJson['class'])){
-            $this->_throwState('912'); //缺少package与class数据项
+            $this->_throwState('917'); //缺少package与class数据项
             return false;
         }
         if(!is_null($this->_ifLog)){ //记录日志
@@ -354,19 +293,23 @@ final class JsonWebService{
             $this->_aLog['step'] = 'resolve';
         }
         //验证package的值是否非法
-        if(!preg_match('/^[a-zA-Z][\w\.?]*[a-zA-Z0-9]$/', $this->_aInJson['package'])){ //TODO 需要经过测试
+        if(!preg_match('/^[a-z][\w\.?]*[a-z0-9]$/', $this->_aInJson['package'])){
             $this->_throwState('930'); //package无效字符
             return false;
         }
         //package接口访问安全验证
-        if ($this->_bCloseSecurityLayer || !$this->checkPackageSecurity()){
-            return false;
+        if (!is_null($this->_oImportSecurity)){
+            $sErrCode = $this->_oImportSecurity->checkPackageSecurity($this->_aInJson); //包访问权验证 checksum 
+            if (!is_null($sErrCode)){
+                $this->_throwState($sErrCode); //抛出 包访问权验证 checksum  错误信息
+                return false;
+            }
         }
         //接口访问预处理类
-        $sFile = rtrim($this->_sRootPath, '/') .'/'. str_replace('.', '/', rtrim($this->_sWorkspace, '.')) .
+        $sFile = $this->_sWorkspace .
                  substr($this->_aInJson['package'], 0, strpos($this->_aInJson['package'], '.')) . '/ApiPretreatment.php';
         if (file_exists($sFile)){ //预处理文件存在
-            require_once rtrim($this->_sRootPath, '/') .'/'. rtrim($this->_sFramePath, '/') .'/interface/IJsonWebServiceVisitPretreatment.php';//注入接口申明
+            require_once rtrim($this->_sFramePath, '/') .'/interface/IJsonWebServiceVisitPretreatment.php';//注入接口申明
             require_once $sFile; //加载包的访问预处理类
             $aRunClass = 'ApiPretreatment'; //访问预处理类名称
             if (class_exists($aRunClass, false)){ //找到访问预处理类
@@ -382,10 +325,8 @@ final class JsonWebService{
                 unset($oap);$oap=null; //回收资源
             }
         }
-
-        $sFile = rtrim($this->_sRootPath, '/') .'/'. str_replace('.', '/', rtrim($this->_sWorkspace, '.')) .
-                 str_replace('.', '/', rtrim($this->_aInJson['package'], '.')) .
-                 '/'. $this->_aInJson['class'] .'.class.php';
+        $sFile = $this->_sWorkspace .
+                 str_replace('.', '/', rtrim($this->_aInJson['package'], '.')) .'/'. $this->_aInJson['class'] .'.class.php';
         if (file_exists($sFile)){ //类文件存在
             require_once $sFile; //加载类
             $sRunClass = strtoupper($this->_aInJson['class']); //类名
@@ -404,6 +345,7 @@ final class JsonWebService{
                 ($oRun->getDoNotWirteLog()) && $this->_ifLog = null;
                 if ($oRun->isDead()){ //接口是否废除
                     $this->_throwState('940'); //接口已经废除
+                    return false;
                 }else{ //接口可正常服务
                     if ($oRun->isDefenseXXS()){ //是否开启XXS攻击过滤
                         $this->_aInJson = self::strip_xss_gpc($this->_aInJson);//阻止跨站攻击
@@ -414,12 +356,13 @@ final class JsonWebService{
                     return true;
                 }
             }else{ //未找到类（类文件命名不正确）
-                $this->_throwState('915'); //未找到执行类
+                $this->_throwState('918'); //未找到执行类
+                return false;
             }
         }else{
-            $this->_throwState('915'); //未找到执行文件
+            $this->_throwState('919'); //未找到执行文件
+            return false;
         }
-        return false;
     }
     /**
      * 检查token访问安全
@@ -427,8 +370,9 @@ final class JsonWebService{
      */
     private function _checkToken(){
         if (!is_null($this->_oTokenSecurity)){
-            if (!isset($this->_aInJson['token']) || strlen($this->_aInJson['token']) !== 32){
+            if (!isset($this->_aInJson['token'])){
                 $this->_throwState('950'); //缺少令牌参数(此状态码是通过bindTokenSecurityCheckObject()函数注入的)
+                return false;
             }
             $sRet = $this->_oTokenSecurity->checkToken($this->_aInJson['token'], $this->_aInJson['package'], $this->_aInJson['class']);
             if (true !== $sRet){
@@ -438,46 +382,6 @@ final class JsonWebService{
                 return true; //通过安全校验
             }
         }else{ //未绑定token安全校验类，忽略安全校验
-            return true;
-        }
-    }
-    /**
-     * 包访问权验证 checksum
-     * <li>如果没有配置包访问密码，则该函数不起作用</li>
-     * @return boolean
-     */
-    protected function checkPackageSecurity(){
-        if (empty($this->_aPackageSecurityPubKey))
-            return true; //未配置接口访问密钥
-        $sPackage = $this->_aInJson['package'];
-        $sClass = $this->_aInJson['class'];
-        $sCheckSum = (isset($this->_aInJson['checksum']) && strlen($this->_aInJson['checksum']) === 32) ? $this->_aInJson['checksum'] : null;
-        //检查是否需要验证包访问权限
-        $aPkgName = explode('.', $sPackage);
-        $aPubKey = null;
-        $aPSP = & $this->_aPackageSecurityPubKey; //取引用
-        foreach ($aPkgName as $sPkgName){
-            if (isset($aPSP[$sPkgName])){ //找到包密码配置项
-                $aPSP = & $aPSP[$sPkgName]; //改变当前根引用指针
-                $aPubKey = $aPSP['_']; //先当前节点的根密码配置
-            }else{
-                break;
-            }
-        }
-        unset($aPSP);
-        if (is_null($aPubKey)){
-            return true; //当前包未配置接口访问密钥
-        }else{ //找到密钥配置
-            $iTime = time(); //当前时间
-            foreach ($aPubKey as $aNode){
-                if ($aNode['deadline'] > 0 && $aNode['deadline'] < $iTime){
-                    continue; //公钥已过期，跳过此公钥
-                }
-                if (md5($this->_iClientUtcTimestemp . $sPackage . $sClass . $aNode['key']) !== $sCheckSum){
-                    $this->_throwState('917'); //校验失败
-                    return false;
-                }
-            }
             return true;
         }
     }
@@ -545,7 +449,7 @@ final class JsonWebService{
      * @return string
      */
     public function getWorkspace(){
-        return rtrim($this->_sRootPath, '/') .'/'. str_replace('.', '/', rtrim($this->_sWorkspace, '.'));
+        return $this->_sWorkspace;
     }
     /**
      *
@@ -582,8 +486,8 @@ final class JsonWebService{
      * 对变量内容的进行字符编码转换
      * @param string $sInCharset 转换前的字符集
      * @param string $sOutCharset 转换后的字符集
-     * @param string | array $mixd 待转换的变量（数组或字符串）
-     * @return string | array 完成转换后的结果
+     * @param string|array $mixd 待转换的变量（数组或字符串）
+     * @return string|array 完成转换后的结果
      */
     static public function convert_encoding($sInCharset, $sOutCharset, & $mixd) {
         if ($sInCharset === $sOutCharset) //字符集相同时不转换
@@ -723,7 +627,7 @@ final class JsonWebService{
         $aData['appname'] = trim(substr($sHeaderVer, 0, strpos($sHeaderVer, '/')));//取出AppName
         $sVer = trim(substr($sHeaderVer, strpos($sHeaderVer, '/')+1, strpos($sHeaderVer, '(') - strpos($sHeaderVer, '/') -1 ));//取出APP版本号
         foreach (array('iphone', 'android', 'apache', 'nginx') as $sSysName){
-            if (false !== strpos($sHeaderVer, $sSysName)){
+            if (false !== stripos($sHeaderVer, $sSysName)){
                 if (in_array($sSysName, array('apache', 'nginx'))){
                     $aData['client'] = 'webserver';
                 }else{

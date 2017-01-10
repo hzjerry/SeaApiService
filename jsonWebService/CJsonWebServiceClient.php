@@ -11,6 +11,10 @@ class CJsonWebServiceClient{
      */
     const LOCAL_CHARSET = 'GBK';
     /**
+     * 版本号
+     */
+    const VER = '1.10.0';
+    /**
      * 客户端信息
      * @var string
      */
@@ -71,7 +75,12 @@ class CJsonWebServiceClient{
      */
     public function __construct($sRootPath, $sFramePath, $sConfigFile){
         $this->_iStartTime = microtime(true); //记录起始时间
-        $this->_sClientName = 'sea_api_php/1.10.0 ('. $_SERVER['SERVER_SOFTWARE'] .')';
+        $this->_sClientName = 'sea_api_php/'. self::VER;
+        if (isset($_SERVER['SERVER_SOFTWARE'])){ //从服务器过来的请求
+            $this->_sClientName .= ' ('. $_SERVER['SERVER_SOFTWARE'] .')';
+        }else{ //直接从php过来的请求
+            $this->_sClientName .= ' (php/'. PHP_VERSION .')';
+        }
         $this->_sRootPath = $sRootPath;
         //载入配置文件信息
         $this->_read_config(rtrim($sRootPath, '/') .'/'. rtrim($sFramePath, '/') .'/config/'. $sConfigFile);

@@ -1,5 +1,5 @@
 <?php
-include(ROOT_PATH . FRAME_PATH . 'interface/IJsonWebServiceLog.php');
+require_once(ROOT_PATH . FRAME_PATH . 'interface/IJsonWebServiceLog.php');
 /**
  * 模拟的测试用例，实现日志接口
  * <li>暂时临时保存在本地</li>

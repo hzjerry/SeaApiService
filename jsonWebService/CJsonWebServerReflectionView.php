@@ -6,7 +6,7 @@
  */
 class CJsonWebServerReflectionView{
     /**
-     * 反射管理试图的配置文件
+     * 反射管理视图的配置文件
      * @var string
      */
     const CONFIG_FILE_NAME = 'config.json_web_service_reflection.php';
@@ -73,9 +73,13 @@ class CJsonWebServerReflectionView{
      * 构造函数
      * @param string $sRootPath 网站绝对根目录
      * @param string $sFramePath 框架文件的相对根路径
-     * @param string $sConfigPath JsonWebService的配置文件路径
+     * @param string $sWorkspacePath 接口的工作逻辑根目录位置
+     * <li>请使用绝对路径,如： d:/website/api/worgroup/</li>
+     * @param string $sConfigPath 反射的配置文件
+     * <li>绝对物理路径</li>
+     * 
      */
-    public function __construct($sRootPath, $sFramePath, $sConfigPath){
+    public function __construct($sRootPath, $sFramePath, $sWorkspacePath, $sConfigPath){
         $this->_iStartTime = microtime(true); //记录起始时间
         $this->_sRootPath = $sRootPath;
         $this->_sFramePath = $sFramePath;
@@ -86,36 +90,45 @@ class CJsonWebServerReflectionView{
         require_once rtrim($sRootPath, '/') .'/'. rtrim($sFramePath, '/') .'/JsonWebService.php'; //取返回状态值用
         require_once rtrim($sRootPath, '/') .'/'. rtrim($sFramePath, '/') .'/CJsonWebServiceClient.php'; //取返回状态值用
         $this->_sLocalCharset = JsonWebService::LOCAL_CHARSET; //获取本地字符集
+        
+        if (file_exists($sWorkspacePath)){ //检查工作目录是否有效
+            $this->_sWorkspace = rtrim($sWorkspacePath, '/\\') .'/';
+        }else{
+            echo __CLASS__ . ':Invalid workspace working directory.';
+            exit;
+        }
+        
         $this->_read_config($sConfigPath);
-        //进入页面的路由逻辑
-        $this->_routePage();
+    }
+    /**
+     * 绑定入口安全验证参数的配置
+     * <li>如果使用原框架提供的checksum安全验证层，则需要绑定CJsonWebServiceImportSecurity对象进来</li>
+     */
+    public function bindImportSecurityObject(CJsonWebServiceImportSecurity $oIS){
+        if (is_null($this->_aPackageSecurityPubKey)){//注入CJsonWebServiceImportSecurity类中的状态码
+            $sErrCode = $oIS->loadCfg(); //载入配置文件
+            if (!is_null($sErrCode)){ //载入配置失败
+                echo __CLASS__ . ':Failed to load security layer configuration.';
+                exit;
+            }
+        }
+        $this->_aPackageSecurityPubKey = $oIS->getPackageSecurityPubKey();
+    }
+    /**
+     * 运行接口反射
+     */
+    public function run(){
+        $this->_routePage(); //进入页面的路由逻辑
     }
     /**
      * 读取配置信息
-     * @param string $sConfigPath JsonWebService的配置文件路径
+     * @param string $sConfigPath 绝对物理路径
      * @return void
      */
     protected function _read_config($sConfigPath){
-        $aCtgRoot = rtrim($this->_sRootPath, '/') .'/'. rtrim($this->_sFramePath, '/') .'/config/';
-        //读取JsonWebService系统的服务端配置信息
-        if (file_exists($sConfigPath .'/' . JsonWebService::CONFIG_FILE_NAME)){ //检查配置文件是否存在
-            $aCfg = require $sConfigPath .'/' . JsonWebService::CONFIG_FILE_NAME; //载入配置文件
-            $this->_sWorkspace = rtrim($this->_sRootPath, '/') .'/'. $aCfg['workgroup'];
-            foreach ($aCfg['sign_pub_key'] as $aNode){
-                if ($aNode['deadline'] === 0){
-                    $this->_sPubKey = $aNode['key'];
-                    break;
-                }
-            }
-            $this->_aPackageSecurityPubKey = $aCfg['package_security_pub_key'];
-            unset($aCfg);
-        }else{
-            echo __CLASS__ . ':Failed to load the JsonWebService configuration file.';
-            exit;
-        }
         //读取 CJsonWebServerReflectionView 系统的服务端配置信息
-        if (file_exists($aCtgRoot . self::CONFIG_FILE_NAME)){ //检查配置文件是否存在
-            $aCfg = require $aCtgRoot . self::CONFIG_FILE_NAME; //载入配置文件
+        if (file_exists($sConfigPath)){ //检查配置文件是否存在
+            $aCfg = require $sConfigPath; //载入配置文件
             if (true === $aCfg['disabled_system']){ //系统已被关闭，拒绝访问
                 $this->_showMsg('接口反射文档模块被关闭，停止对外服务。');
             }else{ //校验ip白名单
@@ -140,7 +153,6 @@ class CJsonWebServerReflectionView{
             echo __CLASS__ . ':Failed to load the CJsonWebServerReflectionView configuration file.';
             exit;
         }
-
     }
     /**
      * 页面路由逻辑
@@ -325,6 +337,9 @@ class CJsonWebServerReflectionView{
      * @return false:包未配密钥 | string: 包密钥
      */
     private function _getPackageKey($aPkg){
+        if (is_null($this->_aPackageSecurityPubKey)){
+            return false;
+        }
         $sPkgKey = null;
         $aPSP = & $this->_aPackageSecurityPubKey; //取引用
         foreach ($aPkg as $sPkgName){
