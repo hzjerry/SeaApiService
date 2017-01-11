@@ -293,11 +293,10 @@ class CJsonWebServiceClient{
      * @return string json字符串
      */
     static function json_encode(& $aData){
-        list($a, $b, $c) = explode('.', PHP_VERSION); //取出版本号
-        if (intval($a) >=6 || (intval($a) >= 5 && intval($b) >= 4)){
-            return json_encode($aData, JSON_UNESCAPED_UNICODE); //不编码全角字符集
-        }else{
+        if (version_compare(PHP_VERSION, '5.4.0', '<')){ //5.4之前的版本不支持 JSON_UNESCAPED_UNICODE
             return json_encode($aData);
+        }else{
+            return json_encode($aData, JSON_UNESCAPED_UNICODE); //不编码全角字符集;
         }
     }
     /**
