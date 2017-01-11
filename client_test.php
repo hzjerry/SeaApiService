@@ -5,7 +5,7 @@ require_once(ROOT_PATH . FRAME_PATH . 'CJsonWebServiceClient.php');
 
 header('Content-Type:text/html; charset=gbk');
 
-$oC = new CJsonWebServiceClient(ROOT_PATH, FRAME_PATH, 'config.json_web_service_client.local.php');
+$oC = new CJsonWebServiceClient(ROOT_PATH . FRAME_PATH .'/config/config.json_web_service_client.local.php');
 
 //数据构造
 $aData = array(

@@ -46,11 +46,6 @@ class CJsonWebServiceClient{
      */
     private $_aPackageSecurityPubKey = null;
     /**
-     * 网站的物理根目录
-     * @var string
-     */
-    private $_sRootPath = '';
-    /**
      * 接口的执行开始时间
      * <li>单位:微妙</li>
      * @var int
@@ -66,14 +61,11 @@ class CJsonWebServiceClient{
      * @var stirng
      */
     private $_last_curl_error = null;
-
     /**
      * 构造函数
-     * @param string $sRootPath 网站绝对根目录
-     * @param string $sFramePath 框架文件的相对根路径
-     * @param string $sConfigFile 配置文件名称
+     * @param string $sCfgFileFullPath 配置文件名称
      */
-    public function __construct($sRootPath, $sFramePath, $sConfigFile){
+    public function __construct($sCfgFileFullPath){
         $this->_iStartTime = microtime(true); //记录起始时间
         $this->_sClientName = 'sea_api_php/'. self::VER;
         if (isset($_SERVER['SERVER_SOFTWARE'])){ //从服务器过来的请求
@@ -81,9 +73,8 @@ class CJsonWebServiceClient{
         }else{ //直接从php过来的请求
             $this->_sClientName .= ' (php/'. PHP_VERSION .')';
         }
-        $this->_sRootPath = $sRootPath;
         //载入配置文件信息
-        $this->_read_config(rtrim($sRootPath, '/') .'/'. rtrim($sFramePath, '/') .'/config/'. $sConfigFile);
+        $this->_read_config($sCfgFileFullPath);
     }
     /**
      * 读取配置信息

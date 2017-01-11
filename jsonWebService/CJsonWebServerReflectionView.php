@@ -27,11 +27,6 @@ class CJsonWebServerReflectionView{
      */
     private $_sWorkspace = '';
     /**
-     * 网站的物理根目录
-     * @var string
-     */
-    private $_sRootPath = '';
-    /**
      * 框架的相对根目录
      * @var string
      */
@@ -54,10 +49,25 @@ class CJsonWebServerReflectionView{
      */
     private $_sPubKey = null;
     /**
+     * JsonWebServiceClient客户端通信实例对象
+     * @var CJsonWebServiceClient
+     */
+    private $_oJwsClient = null;
+    /**
      * 保存CJsonWebServiceClient的配置文件列表
      * @var array
      */
     private $_aClientCfg = null;
+    /**
+     * JsonWebServiceClient的配置文件路径
+     * @var string
+     */
+    private $_sJwsClientCfgPath = null;
+    /**
+     * 模板文件的Url访问根（相对路径）
+     * @var string
+     */
+    private $_sTemplateUrlRoot = null;
     /**
      * 版权信息
      * @var string
@@ -71,24 +81,29 @@ class CJsonWebServerReflectionView{
 
     /**
      * 构造函数
-     * @param string $sRootPath 网站绝对根目录
-     * @param string $sFramePath 框架文件的相对根路径
+     * @param string $sFramePath 框架文件的根
+     * <li>绝对物理路径</li>
      * @param string $sWorkspacePath 接口的工作逻辑根目录位置
      * <li>请使用绝对路径,如： d:/website/api/worgroup/</li>
-     * @param string $sConfigPath 反射的配置文件
+     * @param string $sReflectionTemplateUrlPath 反射模板的url访问相对路径
+     * <li>从网站的URL根开始的访问路径</li> 
+     * @param string $sReflectionCfgFilePath 反射框架的配置文件
      * <li>绝对物理路径</li>
+     * @param string $sJwsClientCfgPath JsonWebServiceClient的配置文件目录
+     * <li>绝对物理路径，不包含配置文件名</li>
      * 
      */
-    public function __construct($sRootPath, $sFramePath, $sWorkspacePath, $sConfigPath){
+    public function __construct($sFramePath, $sWorkspacePath, $sReflectionTemplateUrlPath, $sReflectionCfgFilePath, $sJwsClientCfgPath){
         $this->_iStartTime = microtime(true); //记录起始时间
-        $this->_sRootPath = $sRootPath;
-        $this->_sFramePath = $sFramePath;
+        $this->_sTemplateUrlRoot = rtrim($sReflectionTemplateUrlPath, '/') .'/';
+        $this->_sJwsClientCfgPath = rtrim($sJwsClientCfgPath, '/\\') .'/';
+        $this->_sFramePath = rtrim($sFramePath, '/\\') .'/';
         //加载必须的基础类
-        require_once rtrim($sRootPath, '/') .'/'. rtrim($sFramePath, '/') .'/base/CJsonWebServiceLogicBase.php';
-        require_once rtrim($sRootPath, '/') .'/'. rtrim($sFramePath, '/') .'/base/CJsonWebServiceTokenSecurity.php';
-        require_once rtrim($sRootPath, '/') .'/'. rtrim($sFramePath, '/') .'/interface/IJsonWebServiceProtocol.php';
-        require_once rtrim($sRootPath, '/') .'/'. rtrim($sFramePath, '/') .'/JsonWebService.php'; //取返回状态值用
-        require_once rtrim($sRootPath, '/') .'/'. rtrim($sFramePath, '/') .'/CJsonWebServiceClient.php'; //取返回状态值用
+        require_once $this->_sFramePath .'base/CJsonWebServiceLogicBase.php';
+        require_once $this->_sFramePath .'base/CJsonWebServiceTokenSecurity.php';
+        require_once $this->_sFramePath .'interface/IJsonWebServiceProtocol.php';
+        require_once $this->_sFramePath .'JsonWebService.php'; //取返回状态值用
+        require_once $this->_sFramePath .'CJsonWebServiceClient.php'; //取返回状态值用
         $this->_sLocalCharset = JsonWebService::LOCAL_CHARSET; //获取本地字符集
         
         if (file_exists($sWorkspacePath)){ //检查工作目录是否有效
@@ -97,8 +112,12 @@ class CJsonWebServerReflectionView{
             echo __CLASS__ . ':Invalid workspace working directory.';
             exit;
         }
+        if (!file_exists($this->_sJwsClientCfgPath)){ //检查JsonWebServiceClient配置文件目录是否有效
+            echo __CLASS__ . ':Invalid JsonWebServiceClient config directory.';
+            exit;
+        }
         
-        $this->_read_config($sConfigPath);
+        $this->_read_config($sReflectionCfgFilePath);
     }
     /**
      * 绑定入口安全验证参数的配置
@@ -280,7 +299,7 @@ class CJsonWebServerReflectionView{
             }else{
                 $sPostJson = self::jsonFormat(self::_encodeJson($aPostJson, $this->_sLocalCharset)); //整理用户输入的参数值规范化显示
 
-                $oClient = new CJsonWebServiceClient($this->_sRootPath, $this->_sFramePath, $this->_aClientCfg[$sClientCfg]['file']); //实例化接口通信类
+                $oClient = new CJsonWebServiceClient($this->_sJwsClientCfgPath . $this->_aClientCfg[$sClientCfg]['file']); //实例化接口通信类
                 $sRemoteUrl = $oClient->getRemoteUrl();
 
                 $iTransmissionTime = microtime(true);
@@ -541,11 +560,11 @@ class CJsonWebServerReflectionView{
      */
     private function _showPage($sTemplate, $aParam=array()){
         header('Content-Type:text/html; charset=utf-8');
-        $sTemplateFile = rtrim($this->_sRootPath, '/') .'/'. rtrim($this->_sFramePath, '/') .'/template/'. $sTemplate;
+        $sTemplateFile = $this->_sTemplateUrlRoot . $sTemplate;
         if (file_exists($sTemplateFile)){
             $sTmp = file_get_contents($sTemplateFile);
             $aParam = JsonWebService::convert_encoding($this->_sLocalCharset, 'UTF-8', $aParam);
-            $aParam['{@web_root}'] = $this->_sFramePath .'template/';
+            $aParam['{@web_root}'] = $this->_sTemplateUrlRoot;
             $aParam['{@runtime}'] = sprintf('%.4f', (microtime(true) - $this->_iStartTime) * 1000);
             $aParam['{@local_date}'] = date('Y-m-d H:i:s');
             $aParam['{@utc_date}'] = date('Y-m-d H:i:s', time() - date('Z'));
