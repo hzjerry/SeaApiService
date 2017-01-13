@@ -24,7 +24,6 @@ abstract class CJsonWebServiceImportSecurity{
      */
     static public $aResultStateList = array(
         /*902 ~ 914*/
-        '902'=>'Configuration file loading failed.(入口验证安全层配置文件加载失败)',
         '903'=>'UTC Timestamp expired.(时间戳过期；与utc时差超过3600秒)',
         '904'=>'Invalid parameter HTTP HEAD RANDOM.(HTTP HEAD RANDOM参数无效)',
         '905'=>'Lack of necessary HEAD parameters.(缺少必要的HTTP HEAD参数)',
@@ -34,7 +33,7 @@ abstract class CJsonWebServiceImportSecurity{
     );
     /**
      * 载入安全验证类的配置文件
-     * @return null:配置加载成功 | string: 检查未通过时返回的状态码
+     * @return void
      */
     abstract public function loadCfg();
     /**

@@ -6,11 +6,6 @@
  */
 final class JsonWebService{
     /**
-     * Service端的配置文件名称
-     * @var string
-     */
-    const CONFIG_FILE_NAME='config.json_web_service.php';
-    /**
      * 本地字符集(根据本地开发环境切换)
      * @var string
      */
@@ -164,15 +159,10 @@ final class JsonWebService{
      */
     public function bindImportSecurityObject(CJsonWebServiceImportSecurity $oIS){
         if (is_null($this->_oImportSecurity)){//注入CJsonWebServiceImportSecurity类中的状态码
-            $sErrCode = $oIS->loadCfg(); //载入配置文件
-            if (!is_null($sErrCode)){
-                $this->_throwState($sErrCode); //配置文件读取失败
-                return false;
-            }
-            
             foreach (CJsonWebServiceImportSecurity::$aResultStateList as $sKey => $sVal){
                 self::$aResultStateList[strval($sKey)] = $sVal;
             }
+            $oIS->loadCfg(); //载入配置
         }
         $this->_oImportSecurity = $oIS;
     }

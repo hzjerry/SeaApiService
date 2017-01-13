@@ -15,30 +15,54 @@ final class WSImportSecurity extends CJsonWebServiceImportSecurity{
      */
     private $_aPubKey = null;
     /**
-     * 配置文件的物理绝对路径
-     * @var string
+     * 配置信息
+     * <li>类型为字符串；为配置文件的绝对物理路径</li>
+     * <li>类型为数组；直接为配置项数组，数据格式参照 config.json_web_service 配置文件的格式</li>
+     * @var mixed
      */
-    private $_sConfigPath = null;
+    private $_mCfg = null;
     /**
      * 构造
-     * @param string $sFilePath 配置文件地址
-     * <li>必须为物理绝对地址</li>
+     * @param mixed $mReflectionCfg 反射框架的配置文件
+     * <li>类型为字符串；为配置文件的绝对物理路径</li>
+     * <li>类型为数组；直接为配置项数组，数据格式参照 config.json_web_service 配置文件的格式</li>
      */
-    public function __construct($sFilePath){
-        $this->_sConfigPath = $sFilePath;
+    public function __construct($mCfg){
+        if (is_string($mCfg)){
+            if (file_exists($mCfg)){
+                $this->_mCfg = require $mCfg;
+            }else{
+                echo __CLASS__ . ':Failed to load configuration file.'. "\n file:". $mCfg;
+                exit;
+            }
+        }else{
+            $this->_mCfg = $mCfg;
+        }
+        
+        //检查配置信息是否正确
+        if (!empty($this->_mCfg)){
+            if (!isset($this->_mCfg['sign_pub_key'])){
+                echo __CLASS__ . ':Invaild [sign_pub_key]  configuration key.';
+                exit;
+            }
+            if (!isset($this->_mCfg['package_security_pub_key'])){
+                echo __CLASS__ . ':Invaild [package_security_pub_key]  configuration key.';
+                exit;
+            }
+        }
     }
     /**
      * (non-PHPdoc)
      * @see CJsonWebServiceImportSecurity::loadCfg()
      */
     public function loadCfg(){
-        if (file_exists($this->_sConfigPath)){ //检查配置文件是否存在
-            $aCfg = require $this->_sConfigPath; //载入配置文件
-            $this->_aPubKey = $aCfg['sign_pub_key'];
-            $this->_aPackageSecurityPubKey = $aCfg['package_security_pub_key'];
-            unset($aCfg);
+        if (!empty($this->_mCfg) && is_array($this->_mCfg)){ //配置加载成功
+            $this->_aPubKey = $this->_mCfg['sign_pub_key'];
+            $this->_aPackageSecurityPubKey = $this->_mCfg['package_security_pub_key'];
+            unset($this->_mCfg);$this->_mCfg=null; //加载完成后释放资源
         }else{
-            return 902; //配置文件加载失败
+            echo __CLASS__ . ':Failed to load configuration.';
+            exit;
         }
         return null;
     }
@@ -75,7 +99,7 @@ final class WSImportSecurity extends CJsonWebServiceImportSecurity{
         if (abs(time() - $this->_iClientUtcTimestamp) > 3600){ //计算时间戳是否与标准utc时差超过3600秒
             return '903'; //时间戳过期
         }
-
+        
         //检查body签名有效性
         $bSignFail = true;
         $iTime = time(); //当前时间

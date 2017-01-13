@@ -87,7 +87,7 @@ class CJsonWebServerReflectionView{
      * <li>请使用绝对路径,如： d:/website/api/worgroup/</li>
      * @param string $sReflectionTemplateUrlPath 反射模板的url访问相对路径
      * <li>从网站的URL根开始的访问路径</li> 
-     * @param string $mReflectionCfg 反射框架的配置文件
+     * @param mixed $mReflectionCfg 反射框架的配置文件
      * <li>类型为字符串；为配置文件的绝对物理路径</li>
      * <li>类型为数组；直接为配置项数组，数据格式参照 CJsonWebServerReflectionView 配置文件的格式</li>
      * @param string $sJwsClientCfgPath JsonWebServiceClient的配置文件目录
