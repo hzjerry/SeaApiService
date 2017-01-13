@@ -87,13 +87,14 @@ class CJsonWebServerReflectionView{
      * <li>请使用绝对路径,如： d:/website/api/worgroup/</li>
      * @param string $sReflectionTemplateUrlPath 反射模板的url访问相对路径
      * <li>从网站的URL根开始的访问路径</li> 
-     * @param string $sReflectionCfgFilePath 反射框架的配置文件
-     * <li>绝对物理路径</li>
+     * @param string $mReflectionCfg 反射框架的配置文件
+     * <li>类型为字符串；为配置文件的绝对物理路径</li>
+     * <li>类型为数组；直接为配置项数组，数据格式参照 CJsonWebServerReflectionView 配置文件的格式</li>
      * @param string $sJwsClientCfgPath JsonWebServiceClient的配置文件目录
      * <li>绝对物理路径，不包含配置文件名</li>
      * 
      */
-    public function __construct($sFramePath, $sWorkspacePath, $sReflectionTemplateUrlPath, $sReflectionCfgFilePath, $sJwsClientCfgPath){
+    public function __construct($sFramePath, $sWorkspacePath, $sReflectionTemplateUrlPath, $mReflectionCfg, $sJwsClientCfgPath){
         $this->_iStartTime = microtime(true); //记录起始时间
         $this->_sTemplateUrlRoot = rtrim($sReflectionTemplateUrlPath, '/') .'/';
         $this->_sJwsClientCfgPath = rtrim($sJwsClientCfgPath, '/\\') .'/';
@@ -117,7 +118,7 @@ class CJsonWebServerReflectionView{
             exit;
         }
         
-        $this->_read_config($sReflectionCfgFilePath);
+        $this->_read_config($mReflectionCfg);
     }
     /**
      * 绑定入口安全验证参数的配置
@@ -141,37 +142,72 @@ class CJsonWebServerReflectionView{
     }
     /**
      * 读取配置信息
-     * @param string $sConfigPath 绝对物理路径
+     * @param mixed $mixedCfg 配置信息
+     * <li>类型为字符串；为配置文件的绝对物理路径</li>
+     * <li>类型为数组；直接为配置项数组，数据格式参照 CJsonWebServerReflectionView 配置文件的格式</li>
      * @return void
      */
-    protected function _read_config($sConfigPath){
+    protected function _read_config($mixedCfg){
         //读取 CJsonWebServerReflectionView 系统的服务端配置信息
-        if (file_exists($sConfigPath)){ //检查配置文件是否存在
-            $aCfg = require $sConfigPath; //载入配置文件
-            if (true === $aCfg['disabled_system']){ //系统已被关闭，拒绝访问
-                $this->_showMsg('接口反射文档模块被关闭，停止对外服务。');
-            }else{ //校验ip白名单
-                $aWhiteIp = $aCfg['white_ipv4'];
-                $aSelfIp = JsonWebService::real_ip();
-                $bPass = false;
-                foreach ($aWhiteIp as $sIP){
-                    if ($this->compareIPv4($aSelfIp, explode('.', $sIP))){
-                        $bPass = true; //用户存在与白名单内
-                        break;
-                    }
-                }
-                if (!$bPass){ //非白名单用户
-                    $this->_showMsg('您未被授权，拒绝提供服务。 ip:'. implode('.', $aSelfIp));
-                }
+        if (is_string($mixedCfg)){ //文件方式将爱在配置信息
+            if (file_exists($mixedCfg)){ //检查配置文件是否存在
+                $aCfg = require $mixedCfg; //载入配置文件
+            }else{
+                echo __CLASS__ . ':Failed to load the CJsonWebServerReflectionView configuration file.';
+                exit;
             }
-            $this->_aClientCfg = $aCfg['client_config']; //获取客户端配置文件
-            $this->_sCopyRight = $aCfg['copyright']; //版权信息
-            $this->_sBannerHead = $aCfg['banner_head']; //Banner头名称
-            unset($aCfg);
-        }else{
-            echo __CLASS__ . ':Failed to load the CJsonWebServerReflectionView configuration file.';
+        }elseif (is_array($mixedCfg)){ //数组方式加载配置信息
+            $aCfg = $mixedCfg;
+        }else{ //配置加载失败
+            echo __CLASS__ . ':Invalid configuration information.';
             exit;
         }
+        //检查配置项格式
+        if (!isset($aCfg['disabled_system'])){
+            echo __CLASS__ . ':Invaild [disabled_system]  configuration key.';
+            exit;
+        }
+        if (!isset($aCfg['white_ipv4'])){
+            echo __CLASS__ . ':Invaild [white_ipv4]  configuration key.';
+            exit;
+        }
+        if (!isset($aCfg['client_config'])){
+            echo __CLASS__ . ':Invaild [client_config]  configuration key.';
+            exit;
+        }else{
+            $this->_aClientCfg = $aCfg['client_config']; //获取客户端配置文件
+        }
+        if (!isset($aCfg['copyright'])){
+            echo __CLASS__ . ':Invaild [copyright]  configuration key.';
+            exit;
+        }else{
+            $this->_sCopyRight = $aCfg['copyright']; //版权信息
+        }
+        if (!isset($aCfg['banner_head'])){
+            echo __CLASS__ . ':Invaild [banner_head]  configuration key.';
+            exit;
+        }else{
+            $this->_sBannerHead = $aCfg['banner_head']; //Banner头名称
+        }
+        
+        //安全性过滤
+        if (true === $aCfg['disabled_system']){ //系统已被关闭，拒绝访问
+            $this->_showMsg('接口反射文档模块被关闭，停止对外服务。');
+        }else{ //校验ip白名单
+            $aWhiteIp = $aCfg['white_ipv4'];
+            $aSelfIp = JsonWebService::real_ip();
+            $bPass = false;
+            foreach ($aWhiteIp as $sIP){
+                if ($this->compareIPv4($aSelfIp, explode('.', $sIP))){
+                    $bPass = true; //用户存在与白名单内
+                    break;
+                }
+            }
+            if (!$bPass){ //非白名单用户
+                $this->_showMsg('您未被授权，拒绝提供服务。 ip:'. implode('.', $aSelfIp));
+            }
+        }
+        unset($aCfg);
     }
     /**
      * 页面路由逻辑

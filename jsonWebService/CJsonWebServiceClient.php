@@ -63,9 +63,11 @@ class CJsonWebServiceClient{
     private $_last_curl_error = null;
     /**
      * 构造函数
-     * @param string $sCfgFileFullPath 配置文件名称
+     * @param mixed $mixedCfg 配置信息
+     * <li>类型为字符串；为配置文件的路径</li>
+     * <li>类型为数组；直接为配饰项，数据格式参照 Client 配置文件的格式</li>
      */
-    public function __construct($sCfgFileFullPath){
+    public function __construct($mixedCfg){
         $this->_iStartTime = microtime(true); //记录起始时间
         $this->_sClientName = 'sea_api_php/'. self::VER;
         if (isset($_SERVER['SERVER_SOFTWARE'])){ //从服务器过来的请求
@@ -74,24 +76,51 @@ class CJsonWebServiceClient{
             $this->_sClientName .= ' (php/'. PHP_VERSION .')';
         }
         //载入配置文件信息
-        $this->_read_config($sCfgFileFullPath);
+        $this->_read_config($mixedCfg);
     }
     /**
      * 读取配置信息
+     * @param mixed $mixedCfg 配置信息
+     * <li>类型为字符串；为配置文件的路径</li>
+     * <li>类型为数组；直接为配饰项，数据格式参照 Client 配置文件的格式</li>
      */
-    protected function _read_config($sFilePath){
-        if (file_exists($sFilePath)){ //检查配置文件是否存在
-            $aCfg = require $sFilePath; //载入配置文件
-            $this->_aPubKey = $aCfg['sign_pub_key'];
-            $this->_sJWS_URL = $aCfg['url'];
-            $this->_aPackageSecurityPubKey = $aCfg['package_security_pub_key'];
-            $this->_bDebug = $aCfg['debug'];
-            unset($aCfg);
-            return true;
+    protected function _read_config($mixedCfg){
+        if (is_string($mixedCfg)){ //为字符串，加载配置文件
+            if (file_exists($mixedCfg)){ //检查配置文件是否存在
+                $aCfg = require $mixedCfg; //载入配置文件
+            }else{
+                echo __CLASS__ . ':Failed to load the configuration file.';
+                exit;
+            }
         }else{
-            echo __CLASS__ . ':Failed to load the configuration file.';
+            $aCfg = $mixedCfg;
+        }
+        if (isset($aCfg['sign_pub_key'])){
+            $this->_aPubKey = $aCfg['sign_pub_key'];
+        }else{
+            echo __CLASS__ . ':Invaild [sign_pub_key]  configuration key.';
             exit;
         }
+        if (isset($aCfg['url'])){
+            $this->_sJWS_URL = $aCfg['url'];
+        }else{
+            echo __CLASS__ . ':Invaild [url]  configuration key.';
+            exit;
+        }
+        if (isset($aCfg['package_security_pub_key'])){
+            $this->_aPackageSecurityPubKey = $aCfg['package_security_pub_key'];
+        }else{
+            echo __CLASS__ . ':Invaild [package_security_pub_key] configuration key.';
+            exit;
+        }
+        if (isset($aCfg['debug'])){
+            $this->_bDebug = $aCfg['debug'];
+        }else{
+            echo __CLASS__ . ':Invaild [debug] configuration key.';
+            exit;
+        }
+        unset($aCfg);
+        return true;
     }
     /**
      * 析构函数
