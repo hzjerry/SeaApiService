@@ -11,11 +11,6 @@ final class JsonWebService{
      */
     const LOCAL_CHARSET = 'GBK';
     /**
-     * 客户端的时间戳
-     * @var double
-     */
-    private $_iClientUtcTimestemp = 0;
-    /**
      * 网站的物理根目录
      * @var string
      */
@@ -99,8 +94,9 @@ final class JsonWebService{
     static public $aResultStateList = array(
         '999'=>'There is no post and get data.(不存在post或get数据)',
         '998'=>'Invalid Workspace directory.(接口的workspace实例工作目录不存在)',
+        '997'=>'Application layer processing timeout.(应用层处理超时)',
         '901'=>'Received protocol packets can not be resolved.(收到的协议包无法解析)',
-        //902~914 输入安全验证类占用 CJsonWebServiceImportSecurity 
+        //902~914 输入安全验证类占用 CJsonWebServiceImportSecurity
         '915'=>'Refused to replay the request.(拒绝重放请求)',
         '917'=>'package and class node values do not exist.(package或class节点值不存在)',
         '918'=>'API interface class not found.(api接口服务类未找到)',
@@ -253,7 +249,7 @@ final class JsonWebService{
                 return false;
             }
         }
-        
+
         //将收到的数据包转换为数组
         $this->_aInJson = json_decode($this->_sInData, true);
         if (is_null($this->_aInJson)){ //解析json失败
@@ -289,7 +285,7 @@ final class JsonWebService{
         }
         //package接口访问安全验证
         if (!is_null($this->_oImportSecurity)){
-            $sErrCode = $this->_oImportSecurity->checkPackageSecurity($this->_aInJson); //包访问权验证 checksum 
+            $sErrCode = $this->_oImportSecurity->checkPackageSecurity($this->_aInJson); //包访问权验证 checksum
             if (!is_null($sErrCode)){
                 $this->_throwState($sErrCode); //抛出 包访问权验证 checksum  错误信息
                 return false;
@@ -414,7 +410,9 @@ final class JsonWebService{
 		    echo $this->_sJsonP_Func, '(', $sOutData ,')';
 		}else{ //标准的json数据包头格式
 		    header('Content-Type: application/json; charset=UTF-8'); //默认字符集
-		    if( !headers_sent()  && extension_loaded('zlib')  && false !== stripos( $_SERVER['HTTP_ACCEPT_ENCODING'], 'gzip')){ //客户端支持gzip
+		    if( !headers_sent()  && extension_loaded('zlib')  && isset($_SERVER['HTTP_ACCEPT_ENCODING']) && 
+		        false !== stripos( $_SERVER['HTTP_ACCEPT_ENCODING'], 'gzip')
+		      ){ //发现客户端支持gzip，对数据压缩后发送
 		        $sGzipData = gzencode($sOutData,9); //压缩输出数据
 		        header ('Content-Encoding: gzip'); //使用gzip压缩输出
 		        header ('Vary: Accept-Encoding'); //告诉客户端当前内容已经成功编码压缩
@@ -427,7 +425,6 @@ final class JsonWebService{
 		    }
 		}
 		ob_end_flush();
-
 		if(!is_null($this->_ifLog)){ //记录日志
 		    $this->_aLog['out'] = $sOutData;
 		    $this->_aLog['status_code'] = (isset($this->_aResultData['status']['code']) ? $this->_aResultData['status']['code'] : '');

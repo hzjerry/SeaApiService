@@ -73,8 +73,12 @@ $(function(){
 				  <dd>Signature为对post的body体的签名值，长度为40个字节，算法详见【安全层约定】</dd>
 				</dl>
 				<dl>
-				  <dt>http协议头必须包含：'UTC-Timestemp: xxxxxxxxxxxxx'</dt>
-				  <dd>UTC-Timestemp为Unix 纪元（格林威治时间 1970 年 1 月 1 日 00:00:00）到<strong>当前时间的秒数</strong>，算法详见【安全层约定】</dd>
+				  <dt>http协议头必须包含：'Account-Key: xxxxxx'</dt>
+				  <dd>帐户key，是一个整型值，需要向管理员索取（Account-Key有唯一对应的pubkey，pubkey用于对数据body签名加密）</dd>
+				</dl>
+				<dl>
+				  <dt>http协议头必须包含：'UTC-Timestamp: xxxxxxxxxxxxx'</dt>
+				  <dd>UTC-Timestamp为Unix 纪元（格林威治时间 1970 年 1 月 1 日 00:00:00）到<strong>当前时间的秒数</strong>，算法详见【安全层约定】</dd>
 				</dl>
 				<dl>
 				  <dt>http协议头必须包含：'Random: xxxxxxxx'</dt>
@@ -86,7 +90,7 @@ $(function(){
 				</dl>
 				<dl>
 				  <dt>需要package问授权时必须包含: checksum 节点key</dt>
-				  <dd>checksum并非必须，但是如果服务端接口配置的访问授权时，必须使用指定的package key与utc_timestemp计算签名（即:http协议头中的UTC-Timestemp值），算法详见【安全层约定】</dd>
+				  <dd>checksum并非必须，但是如果服务端接口配置的访问授权时，必须使用指定的package key与utc_Timestamp计算签名（即:http协议头中的UTC-Timestamp值），算法详见【安全层约定】</dd>
 				</dl>
 				<dl>
 				  <dt>http协议头建议包含: 'User-Agent:'</dt>
@@ -105,14 +109,14 @@ $(function(){
 				  <dt>基本包签名验证</dt>
 				  <dd>
 					<p>此为基本安全验证机制，必须使用，否则服务端将拒绝请求访问。</p>
-					<p>签名算法为 sha1(body + utctimestemp + random + pubkey)；body为提交给服务端的入口数据包，pubkey为服务器的公钥（向系统管理员索取）</p>
+					<p>签名算法为 sha1(body + utcTimestamp + random + pubkey)；body为提交给服务端的入口数据包，pubkey为服务器的公钥（向系统管理员索取）</p>
 				  </dd>
 				</dl>
 				<dl class="dl-horizontal">
-				  <dt>Package访问密钥验证</dt>
+				  <dt><s>Package访问密钥验证</s></dt>
 				  <dd>
-					<p>此为辅助安全验证，对于某些特殊要求的package包，进行时间戳校验，此时必须保持请求的客户端与服务端的时间同步，使用utc tmestemp(此处使用的UTC时间与前面header中使用的UTC-Timestemp是同一个值)精度到秒。每个package_key约定的允许时差基本为正负5分钟，当然管理员可以随时调整允许的误差值。</p>
-					<p>checksum 签名算法为 md5(utc_tmestemp + package + class + package_key)；package为接口的访问包路径，class是接口名称，package_key是包的访问密钥（向管理员索取）</p>
+					<p><s>此为辅助安全验证，对于某些特殊要求的package包，进行时间戳校验，此时必须保持请求的客户端与服务端的时间同步，使用utc timestamp(此处使用的UTC时间与前面header中使用的UTC-Timestamp是同一个值)精度到秒。每个package_key约定的允许时差基本为正负5分钟，当然管理员可以随时调整允许的误差值。</s></p>
+					<p><s>checksum 签名算法为 md5(utcTimestamp + package + class + package_key)；package为接口的访问包路径，class是接口名称，package_key是包的访问密钥（向管理员索取）</s></p>
 				  </dd>
 				</dl>
 				<dl class="dl-horizontal">

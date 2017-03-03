@@ -64,10 +64,15 @@ class CJsonWebServerReflectionView{
      */
     private $_sJwsClientCfgPath = null;
     /**
-     * 模板文件的Url访问根（相对路径）
+     * 反射模板文件的访问位置（绝对物理路径）
      * @var string
      */
     private $_sTemplateUrlRoot = null;
+    /**
+     * 模板文件的Web资源访问路径（url相对根的相对路径）
+     * @var string
+     */
+    private $_sWebResourcesUrlRoot = null;
     /**
      * 版权信息
      * @var string
@@ -85,8 +90,9 @@ class CJsonWebServerReflectionView{
      * <li>绝对物理路径</li>
      * @param string $sWorkspacePath 接口的工作逻辑根目录位置
      * <li>请使用绝对路径,如： d:/website/api/worgroup/</li>
-     * @param string $sReflectionTemplateUrlPath 反射模板的url访问相对路径
-     * <li>从网站的URL根开始的访问路径</li> 
+     * @param string $sReflectionTemplatePath 反射模板文件的访问位置（绝对物理路径）
+     * @param string $sWebResourcesUrlRoot 模板文件的Web资源访问路径（url相对根的相对路径）
+     * <li>从网站的URL根开始的访问路径</li>
      * @param mixed $mReflectionCfg 反射框架的配置文件
      * <li>类型为字符串；为配置文件的绝对物理路径</li>
      * <li>类型为数组；直接为配置项数组，数据格式参照 CJsonWebServerReflectionView 配置文件的格式</li>
@@ -94,11 +100,12 @@ class CJsonWebServerReflectionView{
      * <li>绝对物理路径，不包含配置文件名</li>
      * 
      */
-    public function __construct($sFramePath, $sWorkspacePath, $sReflectionTemplateUrlPath, $mReflectionCfg, $sJwsClientCfgPath){
+     public function __construct($sFramePath, $sWorkspacePath, $sReflectionTemplatePath, $sWebResourcesUrlRoot, $mReflectionCfg, $sJwsClientCfgPath){
         $this->_iStartTime = microtime(true); //记录起始时间
-        $this->_sTemplateUrlRoot = rtrim($sReflectionTemplateUrlPath, '/') .'/';
-        $this->_sJwsClientCfgPath = rtrim($sJwsClientCfgPath, '/\\') .'/';
+        $this->_sTemplateUrlRoot = rtrim($sReflectionTemplatePath, '/') .'/';
+        $this->_sWebResourcesUrlRoot = rtrim($sWebResourcesUrlRoot, '/') .'/';
         $this->_sFramePath = rtrim($sFramePath, '/\\') .'/';
+        $this->_sJwsClientCfgPath = rtrim($sJwsClientCfgPath, '/') .'/';
         //加载必须的基础类
         require_once $this->_sFramePath .'base/CJsonWebServiceLogicBase.php';
         require_once $this->_sFramePath .'base/CJsonWebServiceTokenSecurity.php';
@@ -106,7 +113,6 @@ class CJsonWebServerReflectionView{
         require_once $this->_sFramePath .'JsonWebService.php'; //取返回状态值用
         require_once $this->_sFramePath .'CJsonWebServiceClient.php'; //取返回状态值用
         $this->_sLocalCharset = JsonWebService::LOCAL_CHARSET; //获取本地字符集
-        
         if (file_exists($sWorkspacePath)){ //检查工作目录是否有效
             $this->_sWorkspace = rtrim($sWorkspacePath, '/\\') .'/';
         }else{
@@ -189,9 +195,9 @@ class CJsonWebServerReflectionView{
         }else{
             $this->_sBannerHead = $aCfg['banner_head']; //Banner头名称
         }
-        
+
         //安全性过滤
-        if (true === $aCfg['disabled_system']){ //系统已被关闭，拒绝访问
+        if (true == $aCfg['disabled_system']){ //系统已被关闭，拒绝访问
             $this->_showMsg('接口反射文档模块被关闭，停止对外服务。');
         }else{ //校验ip白名单
             $aWhiteIp = $aCfg['white_ipv4'];
@@ -260,7 +266,6 @@ class CJsonWebServerReflectionView{
             $this->_showMsg('无效的package包名。');
         }
         unset($aList);
-
         $aParam['{@package_path}'] = $this->_encodeJson($aPkg, $this->_sLocalCharset);
         $aParam['{@package_list}'] = $this->_encodeJson($aPackageList, $this->_sLocalCharset); //获取当前路径下的包路径
         $aParam['{@class_list}'] = $this->_encodeJson($this->_getClassList($aPkg), $this->_sLocalCharset); //获取当前包路径下的类名
@@ -420,7 +425,6 @@ class CJsonWebServerReflectionView{
         }else{
             $sDir = $this->_sWorkspace . implode('/', $aPkg) .'/';
         }
-
         if (($aDir = @scandir($sDir)) === false){
             return false;
         }else{	//取得目录列表
@@ -538,6 +542,16 @@ class CJsonWebServerReflectionView{
                 $aData['update_log'] = $o->getUpdateLog();
                 $aData['sys_status_code'] = JsonWebService::$aResultStateList;
                 $iCode = null;
+                
+                if(!is_null($this->_aPackageSecurityPubKey)){ //判断是否注入安全层的状态码定义
+                    foreach (CJsonWebServiceImportSecurity::$aResultStateList as $sKey => $sVal){//注入安全层的系统级状态码
+                        $iCode = intval($sKey);
+                        if ($iCode >= 900 && $iCode <= 999){ //只注入系统级错误号
+                            $aData['sys_status_code'][strval($sKey)] = $sVal;
+                        }
+                    }
+                }
+                
                 foreach (CJsonWebServiceLogicBase::$aResultStateList as $sKey => $sVal){//注入API接口基类中定义的系统级状态码
                     $iCode = intval($sKey);
                     if ($iCode >= 900 && $iCode <= 999){ //只注入系统级错误号
@@ -577,10 +591,11 @@ class CJsonWebServerReflectionView{
      * @return false | string
      */
     private function _getPackageReadme($aPkg){
+        static $aFilter = array("\n"=>'\\n', "\t"=>'    ', "\r"=>'');
         if (!empty($aPkg)){
             $sDir = $this->_sWorkspace . implode('/', $aPkg) .'/';
             if (file_exists($sDir . 'readme.txt')){
-                return file_get_contents($sDir . 'readme.txt');
+                return strtr(file_get_contents($sDir . 'readme.txt'), $aFilter);
             }else{
                 return false;
             }
@@ -600,7 +615,7 @@ class CJsonWebServerReflectionView{
         if (file_exists($sTemplateFile)){
             $sTmp = file_get_contents($sTemplateFile);
             $aParam = JsonWebService::convert_encoding($this->_sLocalCharset, 'UTF-8', $aParam);
-            $aParam['{@web_root}'] = $this->_sTemplateUrlRoot;
+            $aParam['{@web_root}'] = $this->_sWebResourcesUrlRoot;
             $aParam['{@runtime}'] = sprintf('%.4f', (microtime(true) - $this->_iStartTime) * 1000);
             $aParam['{@local_date}'] = date('Y-m-d H:i:s');
             $aParam['{@utc_date}'] = date('Y-m-d H:i:s', time() - date('Z'));

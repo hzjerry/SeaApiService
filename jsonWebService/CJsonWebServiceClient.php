@@ -39,7 +39,12 @@ class CJsonWebServiceClient{
      * 系统时间戳
      * @var int
      */
-    private $_iUtcTimestemp = 0;
+    private $_iUtcTimestamp = 0;
+    /**
+     * 帐号key
+     * @var int
+     */
+    private $_iAccountKey = 0;
     /**
      * 包接口访问安全密钥
      * @var array
@@ -94,6 +99,13 @@ class CJsonWebServiceClient{
             }
         }else{
             $aCfg = $mixedCfg;
+        }
+        
+        if (isset($aCfg['access_key'])){
+            $this->_iAccountKey = intval($aCfg['access_key']);
+        }else{
+            echo __CLASS__ . ':Invaild [access_key]  configuration key.';
+            exit;
         }
         if (isset($aCfg['sign_pub_key'])){
             $this->_aPubKey = $aCfg['sign_pub_key'];
@@ -183,9 +195,9 @@ class CJsonWebServiceClient{
         //补全缺失的数据
         $aParam['package'] = $sPackage;
         $aParam['class'] = $sClass;
-        $this->_iUtcTimestemp = time(); //生成系统时间戳
+        $this->_iUtcTimestamp = time(); //生成系统时间戳
         if (!is_null($sPkgKey)){
-            $aParam['checksum'] = md5($this->_iUtcTimestemp . $sPackage . $sClass . $sPkgKey);
+            $aParam['checksum'] = md5($this->_iUtcTimestamp . $sPackage . $sClass . $sPkgKey);
         }
         $sRet = $this->_transmission($aParam, $this->_aPubKey, $bDebug);
         if (false === $sRet){
@@ -222,16 +234,17 @@ class CJsonWebServiceClient{
         $sData = self::json_encode($aData); //数组转换成json对象
         $this->_aHistory['sent'] = $sData; //保存最后一次发送的数据
         $iRandom = rand(10000000, 99999999); //随机数
-        $this->_aHistory['sign'] = sha1($sData . $this->_iUtcTimestemp . $iRandom . $sKey); //数据包签名值
+        $this->_aHistory['sign'] = sha1($sData . $this->_iUtcTimestamp . $iRandom . $sKey); //数据包签名值
         $ch = curl_init();//初始化curl
         $aHeader = array();
         $aHeader[] = 'Connection: close';
         $aHeader[] = 'Content-Type: application/json; charset=utf-8';
         $aHeader[] = 'Content-length: '. strlen($sData);
         $aHeader[] = 'Cache-Control: no-cache';
+        $aHeader[] = 'Account-Key: '. $this->_iAccountKey;  //HTTP_ACCOUNT_KEY
         $aHeader[] = 'Signature: '. $this->_aHistory['sign'];
 //         $aHeader[] = 'Signature: f947d4e3b400adcfd287b0fb9276e5f237cf969a'; //测试回放攻击
-        $aHeader[] = 'UTC-Timestemp: '. $this->_iUtcTimestemp;  //HTTP_UTC_TIMESTEMP
+        $aHeader[] = 'UTC-Timestamp: '. $this->_iUtcTimestamp;  //HTTP_UTC_TIMESTEMP
         $aHeader[] = 'Random: '. $iRandom; //HTTP_RANDOM
         $aHeader[] = 'Expect:';
         if (false !== strpos($this->_sJWS_URL, 'https:')){ //加入https专用请求头
@@ -247,7 +260,7 @@ class CJsonWebServiceClient{
         curl_setopt($ch, CURLOPT_ENCODING ,'gzip'); //加入gzip解析
         curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4 ); //php版本5.3及以上，可关闭IPV6，只使用IPV4
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5 ); //php版本5.2.3及以上，连接超时时间(秒)
-        curl_setopt($ch, CURLOPT_TIMEOUT, 60 ); //运行超时(秒)
+        curl_setopt($ch, CURLOPT_TIMEOUT, 6 ); //运行超时(秒)
         curl_setopt($ch, CURLOPT_POSTFIELDS, $sData); //送出post数据
         curl_setopt($ch, CURLOPT_HEADER, true); //获取头信息
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1); //自动重定向1次

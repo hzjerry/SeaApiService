@@ -38,7 +38,7 @@ final class WSImportSecurity extends CJsonWebServiceImportSecurity{
         }else{
             $this->_mCfg = $mCfg;
         }
-        
+
         //检查配置信息是否正确
         if (!empty($this->_mCfg)){
             if (!isset($this->_mCfg['sign_pub_key'])){
@@ -84,12 +84,14 @@ final class WSImportSecurity extends CJsonWebServiceImportSecurity{
         }else{ //从GET中获取签名参数
             $sSign = isset($_GET['sign']) ? strtolower(trim($_GET['sign'])) : null;
         }
-        if (!isset($_SERVER['HTTP_SIGNATURE']) || !isset($_SERVER['HTTP_UTC_TIMESTEMP']) || !isset($_SERVER['HTTP_RANDOM'])){
-            return '901';//缺少必要的HEAD参数
+        if (!isset($_SERVER['HTTP_SIGNATURE']) || !isset($_SERVER['HTTP_UTC_TIMESTAMP']) || 
+            !isset($_SERVER['HTTP_RANDOM']) || !isset($_SERVER['HTTP_ACCOUNT_KEY']) ){
+            return '905';//缺少必要的HEAD参数
         }
         //取出http头部的必要参数
         $sSign = trim($_SERVER['HTTP_SIGNATURE']);
-        $this->_iClientUtcTimestamp = intval($_SERVER['HTTP_UTC_TIMESTEMP']);
+        $sAK = $_SERVER['HTTP_ACCOUNT_KEY'];
+        $this->_iClientUtcTimestamp = intval($_SERVER['HTTP_UTC_TIMESTAMP']);
         $sRandom = $_SERVER['HTTP_RANDOM'];
         if (strlen($sRandom) !== 8){
             return '904'; //HTTP HEAD RANDOM参数无效
@@ -99,19 +101,20 @@ final class WSImportSecurity extends CJsonWebServiceImportSecurity{
         if (abs(time() - $this->_iClientUtcTimestamp) > 3600){ //计算时间戳是否与标准utc时差超过3600秒
             return '903'; //时间戳过期
         }
-        
         //检查body签名有效性
         $bSignFail = true;
         $iTime = time(); //当前时间
-        foreach ($this->_aPubKey as $aNode){
-            if ($aNode['deadline'] > 0 && $aNode['deadline'] < $iTime){
-                continue; //公钥已过期，跳过此公钥
+        if (!isset($this->_aPubKey[$sAK])){
+            return '907'; //数据签名验证失败
+        }else{
+            if ($this->_aPubKey[$sAK]['deadline'] > 0 && $this->_aPubKey[$sAK]['deadline'] < $iTime){
+                return '907'; //公钥已过期，跳过此公钥
             }
-            if (sha1($sInData . $this->_iClientUtcTimestamp . $sRandom . $aNode['key']) === $sSign){
-                return null; //通过检查
+            if (sha1($sInData . $this->_iClientUtcTimestamp . $sRandom . $this->_aPubKey[$sAK]['key']) !== $sSign){
+                return '907'; //签名值不一样
             }
         }
-        return '907'; //数据签名验证失败
+        return null; //数据签名验证通过
     }
     /**
      * (non-PHPdoc)
