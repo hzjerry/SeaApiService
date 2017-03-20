@@ -239,6 +239,7 @@ class CJsonWebServerReflectionView{
         $aParam = array();
         $sPkg = self::_R('p');
         $sCls = self::_R('c'); //'GET_USER_INFO'
+        $sType = self::_R('t'); //type下载类型(''|txt|md)
         if (empty($sPkg)){
             $aPkg = array();
             $aParam['{@package_name}'] = '';
@@ -284,7 +285,16 @@ class CJsonWebServerReflectionView{
             $aParam['{@class_info}'] = 'false';
             $aParam['{@class_name}'] = '';
         }
-        $this->_showPage('api_reflection.html', $aParam);
+        if (in_array($sType, array('txt', 'md'))){ //文档下载方式
+            $aParam = array(
+                'pkg'=>implode('.', $aPkg),
+                'cls'=>$sCls,
+                'info'=>$aClaInfo,
+            );
+            $this->downloadReflectionFile($sType, $aParam);
+        }else{ //html显示方式
+            $this->_showPage('api_reflection.html', $aParam);
+        }
     }
     /**
      * API测试用例
@@ -601,6 +611,59 @@ class CJsonWebServerReflectionView{
             }
         }
         return false;
+    }
+    /**
+     * 下载接口的说明反射文档
+     * @param string $sType 文档类型[txt|dm]
+     * @param string $aParam 文档参数
+     */
+    private function downloadReflectionFile($sType, $aParam=array()){
+        foreach ($aParam['info']['api_status_code'] as $sKey => $sVal){
+            $aStatusCode[] = '['. $sKey ."]\t=>\t". $sVal;
+        }
+        foreach ($aParam['info']['sys_status_code'] as $sKey => $sVal){
+            $aStatusCode[] = '['. $sKey ."]\t=>\t". $sVal;
+        }
+        foreach ($aParam['info']['update_log'] as $aNode){
+            $aUpdateLog[] = $aNode['date'] .': ['. $aNode['name'] .'] '. $aNode['memo'];
+        }
+        
+        $aReplace=array(
+            '{@pkg}'=>$aParam['pkg'],
+            '{@cls}'=>$aParam['cls'],
+            '{@fingerprint}'=>$aParam['info']['fingerprint'],
+        );
+        $aReplace['{@class_explain}'] = strtr($aParam['info']['class_explain'], array('<br/>'=>"\r\n", '&nbsp;'=>" "));
+        $aReplace['{@attention_explain}'] = strtr($aParam['info']['attention_explain'], array('<br/>'=>"\r\n", '&nbsp;'=>" "));
+        $aReplace['{@dead_line}'] = (('Never expires' === $aParam['info']['dead_line']) ? '永不过期' : $aParam['info']['dead_line']);
+        $aReplace['{@token_security_check}'] = (('N' === $aParam['info']['token_security_check']) ? '未开启验证' : '开启验证');
+        $aReplace['{@status_code}'] = implode("\r\n", $aStatusCode);
+        $aReplace['{@update_log}'] = implode("\r\n", $aUpdateLog);
+        $aReplace['{@in_protocol_format}'] = strtr($aParam['info']['in_protocol_format'], array('<br/>'=>"\r\n", '&nbsp;'=>" ", '&#34;'=>'"'));
+        $aReplace['{@out_protocol_format}'] = strtr($aParam['info']['out_protocol_format'], array('<br/>'=>"\r\n", '&nbsp;'=>" ", '&#34;'=>'"'));
+        
+        //载入指定类型的模板
+        if ('txt' === $sType){
+            $sTemplateFile = $this->_sTemplateUrlRoot . 'reflection_txt.template'; //模板文件
+            $sFileName = $aParam['pkg'] .'.'. $aParam['cls'] .'.txt'; //文件名
+        }elseif ('md' === $sType){
+            $sTemplateFile = $this->_sTemplateUrlRoot . 'reflection_md.template'; //模板文件
+            $sFileName = $aParam['pkg'] .'.'. $aParam['cls'] .'.md'; //文件名
+        }else{
+            echo 'Invalid type';
+            exit();
+        }
+        
+        if (file_exists($sTemplateFile)){
+            //文件头
+            header("Content-Type:text/html;charset=utf-8");
+            header("Content-Disposition: attachment; filename=".$sFileName);
+            $aReplace = JsonWebService::convert_encoding($this->_sLocalCharset, 'UTF-8', $aReplace);
+            echo strtr(file_get_contents($sTemplateFile), $aReplace); //载入模板比替换输出
+        }else{
+            echo 'template not find';
+        }
+        exit();
     }
     /**
      * 显示模板页面
