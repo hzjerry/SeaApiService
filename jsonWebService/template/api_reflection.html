@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+  <meta name="copyright" content="xxx.com">
+  <meta name="description" content="html5,JsonWebService">
+  <title>api 接口文档</title>
+  <link rel="stylesheet" type="text/css" href="{@web_root}css/web_v2.css" />
+  <link rel="stylesheet" type="text/css" href="{@web_root}css/bootstrap.min.css" />
+  <link rel="stylesheet" type="text/css" href="{@web_root}css/bootstrap-theme.min.css" />
+  <link rel="stylesheet" type="text/css" href="{@web_root}css/normalize.css" />
+  <script type="text/javascript" src="{@web_root}js/jquery-1.10.2.min.js"></script>
+<script>
+var maPackagePath = {@package_path};
+var maPakageList = {@package_list};
+var maClssList = {@class_list};
+var msPackageName = '{@package_readme}';
+var moClassInfo = {@class_info};
+var msClassName = '{@class_name}';
+</script>
+
+<style>
+.memu_list ul{
+	display:inline;
+	list-style:none;/*去掉li前的点标记*/
+	font-size:12px;
+	padding:0;
+}
+.memu_list ul li{
+	padding-left:24px;
+	line-height: 25px;
+
+	-webkit-transition: background .30s ease-out;
+	-moz-transition: background .30s ease-out;
+	-o-transition: background .30s ease-out;
+	transition: background .30s ease-out;
+}
+.memu_list ul li.selected{
+	border-left: 5px solid #dd4b39;
+	padding-left:19px;
+	background:#f7f7f7;
+}
+.memu_list ul li.selected a{
+	color: red;
+	font-weight: bold;
+}
+.memu_list ul li:hover{
+	background:#eeeeee;
+}
+.memu_list ul li a{
+	color:black;
+	text-decoration:none;
+}
+</style>
+
+</head>
+
+<body>
+    <header id="gc-bar"><!--头部Banner块-->
+        <div class="project_name">{@banner_head}API document</div>
+        <div class="head_button">
+            <ul>
+                <li data-toggle="tooltip" data-placement="left" title="API document" onclick="javascript:window.location.href='?ctl=doc'"> <span class="glyphicon glyphicon-book"></span> </li>
+                <li data-toggle="tooltip" data-placement="left" title="Helper" onclick="javascript:window.location.href='?ctl=helper'"> <span class="glyphicon glyphicon-question-sign"></span> </li>
+            </ul>
+        </div>
+    </header>
+
+    <div id="gc-content"><!--内容块-->
+		<div class="subtitle" id="id_subtitle">
+			<span class="nav_menu">test master</span><span class="nav_separator"></span>
+			<span class="nav_menu">test sub1</span><span class="nav_separator"></span>
+		</div>
+
+        <div class="content-frame">
+            <div class="cf_body" style="width:300px;"><!--内容区-->
+                <div class="expressArea hide" id="id_package_list_area"><!--信息表达区-->
+                    <header>Package list:</header>
+                    <section id="id_package_list_item" class="memu_list">
+						<ul>
+						  <li class="selected"><a href="#" >package name 1</a></li>
+						  <li><a href="#" >package name 2</a></li>
+						<ul>
+                    </section>
+                </div>
+                <div class="expressArea hide" id="id_class_list_area"><!--信息表达区-->
+                    <header>Class list:</header>
+                    <section id="id_class_list_item" class="memu_list">
+						<ul>
+						  <li class="selected"><a href="#" >class name 1</a></li>
+						  <li><a href="#" >class name 2</a></li>
+						<ul>
+                    </section>
+                </div>
+            </div>
+
+            <div class="cf_body" style="max-width:600px;"><!--内容区-->
+				<div class="hide" id="id_class_info_notic">
+					<div class="expressArea"><!--信息表达区-->
+						<section>
+							<div class="alert alert-danger"><strong>温馨提示：</strong>请在左侧通过package list与class list找到你需要查看的接口文档</div>
+						</section>
+					</div>
+				</div>
+
+				<div class="hide" id="id_class_info_doc">
+					<div class="expressArea"><!--信息表达区-->
+						<section>
+							<blockquote class="has-warning"><!--提示区-->
+								<strong>package:</strong><span id="id_package_name"> {@package_name}</span><br/>
+								<footer>Definition: {@package_readme}</footer>
+								<strong>下载离线文档:</strong>
+								<a href="?ctl=doc&p={@package_name}&c={@class_name}&t=txt" title="下载纯文本格式文档">.txt</a> |
+								<a href="?ctl=doc&p={@package_name}&c={@class_name}&t=md" title="下载Markdown格式文档">.md</a>
+							</blockquote>
+						</section>
+					</div>
+
+					<div class="expressArea"><!--信息表达区-->
+						<header>接口介绍</header>
+						<section id="id_api_introduce" >
+						</section>
+					</div>
+					<div class="expressArea"><!--信息表达区-->
+						<header>输入参数约定（Json格式）</header>
+						<section id="id_inport_param" style="padding:10px;">
+						</section>
+					</div>
+					<div class="expressArea"><!--信息表达区-->
+						<header>输出参数约定（Json格式）</header>
+						<section id="id_outport_param" style="padding:10px;">
+						</section>
+					</div>
+					<div class="expressArea"><!--信息表达区-->
+						<header>返回状态值说明（status.code）</header>
+						<section id="id_result_code_list" style="padding:10px;">
+						</section>
+					</div>
+
+					<div class="row">
+						<div class="col-md-6">
+							<div class="expressArea"><!--信息表达区-->
+								<header>接口更新维护记录</header>
+								<section id="id_maintenance_record" style="padding:5px;">
+								</section>
+							</div>
+						</div>
+						<div class="col-md-6">
+							<div class="expressArea"><!--信息表达区-->
+								<header>手工调试接口</header>
+								<section>
+									<button type="button" class="btn btn-primary" onclick="javascript:window.location.href='?ctl=test&p={@package_name}&c={@class_name}'">在线调试接口</button>
+								</section>
+							</div>
+						</div>
+					</div>
+
+				</div>
+
+            </div>
+        </div>
+    </div>
+
+    <div id="gc-footer" >
+        <div style="background:url({@web_root}/imgs/html5.png) no-repeat transparent;">
+            <span style="padding-left:40px;">&copy;{@copyright}</span>
+        </div>
+    </div>
+
+</body>
+<script type="text/javascript"	src="{@web_root}js/bootstrap.min.js"></script>
+<script type="text/javascript"	src="{@web_root}js/template_api_reflection.js"></script>
+</html>

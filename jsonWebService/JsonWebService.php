@@ -401,7 +401,7 @@ final class JsonWebService{
 		    $this->_aResultData['status']['runtime'] = sprintf('%.4f', (microtime(true) - $this->_iStartTime) * 1000);
 		}
 		$sOutData = self::json_encode($this->_aResultData, empty($this->_aResultData['result'])); //存储需要发送的数据包
-
+		
 		ob_start();
 		if (!is_null($this->_sJsonP_Func)){ //输出数据需要封装成jsonp方式
 		    header('Content-Type: text/javascript; charset=UTF-8'); //默认字符集
@@ -610,6 +610,9 @@ final class JsonWebService{
      */
     static public function resloveUserAgentInfo(){
         $aData = array('ver'=>'', 'appname'=>'', 'client'=>'other');
+        if (!isset($_SERVER['HTTP_USER_AGENT']) || empty($_SERVER['HTTP_USER_AGENT'])){
+            return $aData;
+        }
         $sHeaderVer = strtolower($_SERVER['HTTP_USER_AGENT']);
         $aData['appname'] = trim(substr($sHeaderVer, 0, strpos($sHeaderVer, '/')));//取出AppName
         $sVer = trim(substr($sHeaderVer, strpos($sHeaderVer, '/')+1, strpos($sHeaderVer, '(') - strpos($sHeaderVer, '/') -1 ));//取出APP版本号
